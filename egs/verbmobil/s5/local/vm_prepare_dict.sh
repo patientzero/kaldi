@@ -14,7 +14,7 @@ if [ $# !=  2 ]; then
   exit 1;
 fi 
 
-dir=data/local/dict
+dir=data/local/dict_nosp
 mkdir -p $dir
 
 vm1_dir=$1
@@ -27,6 +27,27 @@ if [ ! -d $vm1_dir ] || [ ! -d $vm2_dir ]; then
 fi
 
 # Create lexikon for VM1 and VM2 train data
-cat $vm2_dir/VM2_TRAIN.lex $vm1_dir/VM1_TRAIN.lex | sort | uniq > $dir/lexicon.txt
+cat $vm2_dir/VM2_TRAIN.lex $vm1_dir/VM1_TRAIN.lex | sort | uniq > $dir/lexicon0.txt
 
-echo "Dictionary preparation succeeded"
+# Pre-processing (remove comments)
+grep -v '^#' $dir/lexicon0.txt | awk 'NF>0' | sort > $dir/lexicon1.txt || exit 1;
+
+cat $dir/lexicon1.txt | awk '{ for(n=2;n<=NF;n++){ phones[$n] = 1; }} END{for (p in phones) print p;}' | \
+    grep -v sil > $dir/nonsilence_phones.txt  || exit 1;
+
+( echo sil; echo spn; echo nsn; echo lau ) > $dir/silence_phones.txt
+
+echo sil > $dir/optional_silence.txt
+
+# Add to the lexicon the silences, noises etc.
+( echo '!sil sil'; echo '[vocalized-noise] spn'; echo '[noise] nsn'; \
+    echo '[laughter] lau'; echo '<unk> spn' ) \
+    | cat - $dir/lexicon1.txt  > $dir/lexicon2.txt || exit 1;
+
+# No "extra questions" in the input to this setup, as we don't
+# have stress or tone.
+echo -n >$dir/extra_questions.txt
+
+cp $dir/lexicon2.txt $dir/lexicon.txt #Final lexicon
+
+echo "Prepared dictionary and phone-sets for Verbmobil"
