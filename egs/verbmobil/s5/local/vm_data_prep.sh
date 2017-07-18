@@ -24,22 +24,6 @@ if [ ! -d $vm1_dir ] || [ ! -d $vm2_dir ]; then
   exit 1; 
 fi  
 
-links=$dir/links
-
-rm -r $links 2>/dev/null
-mkdir $links $links/train_vm1 $links/train_vm2
-
-# Create Symlinks
-for train_data in `ls $vm1_dir | grep -P '^[a-z]\d{3}[a-z]'`
-do
-    ln -s $vm1_dir/$train_data $links/train_vm1/
-done
-
-for train_data in `ls $vm2_dir | grep -P '^[a-z]\d{3}[a-z]'`
-do
-    ln -s $vm2_dir/$train_data $links/train_vm2/
-done
-
 local=`pwd`/local
 utils=`pwd`/utils
 
@@ -66,10 +50,15 @@ do
     utt=`cat $uttPath".par" | grep ^ORT \
 	| awk '{printf "%s ", $3} END{print ""}' | sed 's/ $//g'`
 
-    echo "$uttId $utt" >> $train/text
-    echo "$uttId $spkId" >> $train/utt2spk
-    echo "$uttId $uttPath.wav |" >> $train/wav.scp
+    echo $spkId"_"$uttId $utt >> $train/text0
+    echo $spkId"_"$uttId $spkId >> $train/utt2spk0
+    echo $spkId"_"$uttId $uttPath".wav" >> $train/wav0.scp
 done < $dir/data_uttId_uttP_train.flist
 
+cat $train/text0 | uniq | sort > $train/text
+cat $train/utt2spk0 | uniq | sort > $train/utt2spk
+cat $train/wav0.scp | uniq | sort > $train/wav.scp
+rm $train/text0 $train/utt2spk0
+
 # Create spk2utt File from utt2spk
-cat $train/utt2spk | $util/utt2spk_to_spk2utt.pl > $train/spk2utt
+cat $train/utt2spk | utils/utt2spk_to_spk2utt.pl > $train/spk2utt
