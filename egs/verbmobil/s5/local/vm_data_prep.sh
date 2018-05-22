@@ -8,7 +8,7 @@ if [ $# !=  2 ]; then
   echo "The arguments should be the top-levels vm1 and vm2 corpus directories."
   exit 1; 
 fi 
-
+export LC_ALL=C
 vm1_dir=$1
 vm2_dir=$2
 
@@ -30,12 +30,13 @@ utils=`pwd`/utils
 # Expect vm_dic_download to be run first
 # Create flist from VM1 and VM2 with Utterance Infos and
 # Path to the utterance Directory
+# fixed directory substring, otherwise no data was found
 cat $vm1_dir/VM1_TRAIN \
-    | awk '{printf("%s '$vm1_dir'/%s/%s\n", $1, substr($1,0,6), $1)}' \
+    | awk '{printf("%s '$vm1_dir'/%s/%s\n", $1, substr($1,0,5), $1)}' \
     > $dir/data_uttId_uttP_train_tmp.flist
 
 cat $vm2_dir/VM2_TRAIN \
-    | awk '{printf("%s '$vm2_dir'/%s/%s\n", $1, substr($1,0,6), $1)}' \
+    | awk '{printf("%s '$vm2_dir'/%s/%s\n", $1, substr($1,0,5), $1)}' \
     >> $dir/data_uttId_uttP_train_tmp.flist
 
 cat $dir/data_uttId_uttP_train_tmp.flist | sort |uniq > $dir/data_uttId_uttP_train.flist
