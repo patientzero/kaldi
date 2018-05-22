@@ -12,10 +12,12 @@
 # right, and this ends up getting shared.  This is at the expense of slightly
 # higher disk I/O while training.
 
+set -o pipefail
+trap "" PIPE
 
 # Begin configuration section.
 cmd=run.pl
-feat_type=raw     # set it to 'lda' to use LDA features.
+frame_subsampling_factor=1
 frames_per_eg=8   # number of frames of labels per example.  more->less disk space and
                   # less time preparing egs, but more I/O during training.
                   # Note: may in general be a comma-separated string of alternative
@@ -39,8 +41,6 @@ samples_per_iter=400000 # this is the target number of egs in each archive of eg
                         # it egs_per_iter. This is just a guideline; it will pick
                         # a number that divides the number of samples in the
                         # entire data.
-
-transform_dir=     # If supplied, overrides alidir as the place to find fMLLR transforms
 
 stage=0
 nj=6         # This should be set to the maximum number of jobs you are
@@ -69,8 +69,6 @@ if [ $# != 3 ]; then
   echo "                                                   # network speed).  default=6"
   echo "  --cmd (utils/run.pl;utils/queue.pl <queue opts>) # how to run jobs."
   echo "  --samples-per-iter <#samples;400000>             # Target number of egs per archive (option is badly named)"
-  echo "  --feat-type <lda|raw>                            # (raw is the default).  The feature type you want"
-  echo "                                                   # to use as input to the neural net."
   echo "  --frames-per-eg <frames;8>                       # number of frames per eg on disk"
   echo "                                                   # May be either a single number or a comma-separated list"
   echo "                                                   # of alternatives (useful when training LSTMs, where the"
@@ -119,8 +117,8 @@ if ! [ $num_utts -gt $[$num_utts_subset*4] ]; then
 fi
 
 # Get list of validation utterances.
-awk '{print $1}' $data/utt2spk | utils/shuffle_list.pl | head -$num_utts_subset \
-    > $dir/valid_uttlist || exit 1;
+awk '{print $1}' $data/utt2spk | utils/shuffle_list.pl 2>/dev/null | head -$num_utts_subset \
+    > $dir/valid_uttlist
 
 if [ -f $data/utt2uniq ]; then  # this matters if you use data augmentation.
   echo "File $data/utt2uniq exists, so augmenting valid_uttlist to"
@@ -134,57 +132,17 @@ if [ -f $data/utt2uniq ]; then  # this matters if you use data augmentation.
 fi
 
 awk '{print $1}' $data/utt2spk | utils/filter_scp.pl --exclude $dir/valid_uttlist | \
-   utils/shuffle_list.pl | head -$num_utts_subset > $dir/train_subset_uttlist || exit 1;
+   utils/shuffle_list.pl 2>/dev/null | head -$num_utts_subset > $dir/train_subset_uttlist
 
-[ -z "$transform_dir" ] && transform_dir=$alidir
-
-# because we'll need the features with a different number of jobs than $alidir,
-# copy to ark,scp.
-if [ -f $transform_dir/trans.1 ] && [ $feat_type != "raw" ]; then
-  echo "$0: using transforms from $transform_dir"
-  if [ $stage -le 0 ]; then
-    $cmd $dir/log/copy_transforms.log \
-      copy-feats "ark:cat $transform_dir/trans.* |" "ark,scp:$dir/trans.ark,$dir/trans.scp"
-  fi
-fi
-if [ -f $transform_dir/raw_trans.1 ] && [ $feat_type == "raw" ]; then
-  echo "$0: using raw transforms from $transform_dir"
-  if [ $stage -le 0 ]; then
-    $cmd $dir/log/copy_transforms.log \
-      copy-feats "ark:cat $transform_dir/raw_trans.* |" "ark,scp:$dir/trans.ark,$dir/trans.scp"
-  fi
-fi
-
-
+echo "$0: creating egs.  To ensure they are not deleted later you can do:  touch $dir/.nodelete"
 
 ## Set up features.
-echo "$0: feature type is $feat_type"
+echo "$0: feature type is raw"
 
-case $feat_type in
-  raw) feats="ark,s,cs:utils/filter_scp.pl --exclude $dir/valid_uttlist $sdata/JOB/feats.scp | apply-cmvn $cmvn_opts --utt2spk=ark:$sdata/JOB/utt2spk scp:$sdata/JOB/cmvn.scp scp:- ark:- |"
-    valid_feats="ark,s,cs:utils/filter_scp.pl $dir/valid_uttlist $data/feats.scp | apply-cmvn $cmvn_opts --utt2spk=ark:$data/utt2spk scp:$data/cmvn.scp scp:- ark:- |"
-    train_subset_feats="ark,s,cs:utils/filter_scp.pl $dir/train_subset_uttlist $data/feats.scp | apply-cmvn $cmvn_opts --utt2spk=ark:$data/utt2spk scp:$data/cmvn.scp scp:- ark:- |"
-    echo $cmvn_opts >$dir/cmvn_opts # caution: the top-level nnet training script should copy this to its own dir now.
-   ;;
-  lda)
-    splice_opts=`cat $alidir/splice_opts 2>/dev/null`
-    # caution: the top-level nnet training script should copy these to its own dir now.
-    cp $alidir/{splice_opts,cmvn_opts,final.mat} $dir || exit 1;
-    [ ! -z "$cmvn_opts" ] && \
-       echo "You cannot supply --cmvn-opts option if feature type is LDA." && exit 1;
-    cmvn_opts=$(cat $dir/cmvn_opts)
-    feats="ark,s,cs:utils/filter_scp.pl --exclude $dir/valid_uttlist $sdata/JOB/feats.scp | apply-cmvn $cmvn_opts --utt2spk=ark:$sdata/JOB/utt2spk scp:$sdata/JOB/cmvn.scp scp:- ark:- | splice-feats $splice_opts ark:- ark:- | transform-feats $dir/final.mat ark:- ark:- |"
-    valid_feats="ark,s,cs:utils/filter_scp.pl $dir/valid_uttlist $data/feats.scp | apply-cmvn $cmvn_opts --utt2spk=ark:$data/utt2spk scp:$data/cmvn.scp scp:- ark:- | splice-feats $splice_opts ark:- ark:- | transform-feats $dir/final.mat ark:- ark:- |"
-    train_subset_feats="ark,s,cs:utils/filter_scp.pl $dir/train_subset_uttlist $data/feats.scp | apply-cmvn $cmvn_opts --utt2spk=ark:$data/utt2spk scp:$data/cmvn.scp scp:- ark:- | splice-feats $splice_opts ark:- ark:- | transform-feats $dir/final.mat ark:- ark:- |"
-    ;;
-  *) echo "$0: invalid feature type --feat-type '$feat_type'" && exit 1;
-esac
-
-if [ -f $dir/trans.scp ]; then
-  feats="$feats transform-feats --utt2spk=ark:$sdata/JOB/utt2spk scp:$dir/trans.scp ark:- ark:- |"
-  valid_feats="$valid_feats transform-feats --utt2spk=ark:$data/utt2spk scp:$dir/trans.scp ark:- ark:- |"
-  train_subset_feats="$train_subset_feats transform-feats --utt2spk=ark:$data/utt2spk scp:$dir/trans.scp ark:- ark:- |"
-fi
+feats="ark,s,cs:utils/filter_scp.pl --exclude $dir/valid_uttlist $sdata/JOB/feats.scp | apply-cmvn $cmvn_opts --utt2spk=ark:$sdata/JOB/utt2spk scp:$sdata/JOB/cmvn.scp scp:- ark:- |"
+valid_feats="ark,s,cs:utils/filter_scp.pl $dir/valid_uttlist $data/feats.scp | apply-cmvn $cmvn_opts --utt2spk=ark:$data/utt2spk scp:$data/cmvn.scp scp:- ark:- |"
+train_subset_feats="ark,s,cs:utils/filter_scp.pl $dir/train_subset_uttlist $data/feats.scp | apply-cmvn $cmvn_opts --utt2spk=ark:$data/utt2spk scp:$data/cmvn.scp scp:- ark:- |"
+echo $cmvn_opts >$dir/cmvn_opts # caution: the top-level nnet training script should copy this to its own dir now.
 
 if [ ! -z "$online_ivector_dir" ]; then
   ivector_dim=$(feat-to-dim scp:$online_ivector_dir/ivector_online.scp -) || exit 1;
@@ -302,13 +260,15 @@ if [ $stage -le 3 ]; then
     utils/filter_scp.pl $dir/valid_uttlist $dir/ali_special.scp \| \
     ali-to-pdf $alidir/final.mdl scp:- ark:- \| \
     ali-to-post ark:- ark:- \| \
-    nnet3-get-egs --num-pdfs=$num_pdfs $ivector_opts $egs_opts "$valid_feats" \
+    nnet3-get-egs --num-pdfs=$num_pdfs --frame-subsampling-factor=$frame_subsampling_factor \
+      $ivector_opts $egs_opts "$valid_feats" \
       ark,s,cs:- "ark:$dir/valid_all.egs" || touch $dir/.error &
   $cmd $dir/log/create_train_subset.log \
     utils/filter_scp.pl $dir/train_subset_uttlist $dir/ali_special.scp \| \
     ali-to-pdf $alidir/final.mdl scp:- ark:- \| \
     ali-to-post ark:- ark:- \| \
-    nnet3-get-egs --num-pdfs=$num_pdfs $ivector_opts $egs_opts "$train_subset_feats" \
+    nnet3-get-egs --num-pdfs=$num_pdfs --frame-subsampling-factor=$frame_subsampling_factor \
+      $ivector_opts $egs_opts "$train_subset_feats" \
       ark,s,cs:- "ark:$dir/train_subset_all.egs" || touch $dir/.error &
   wait;
   [ -f $dir/.error ] && echo "Error detected while creating train/valid egs" && exit 1
@@ -360,7 +320,8 @@ if [ $stage -le 4 ]; then
   echo "$0: Generating training examples on disk"
   # The examples will go round-robin to egs_list.
   $cmd JOB=1:$nj $dir/log/get_egs.JOB.log \
-    nnet3-get-egs --num-pdfs=$num_pdfs $ivector_opts $egs_opts "$feats" \
+    nnet3-get-egs --num-pdfs=$num_pdfs --frame-subsampling-factor=$frame_subsampling_factor \
+    $ivector_opts $egs_opts "$feats" \
     "ark,s,cs:filter_scp.pl $sdata/JOB/utt2spk $dir/ali.scp | ali-to-pdf $alidir/final.mdl scp:- ark:- | ali-to-post ark:- ark:- |" ark:- \| \
     nnet3-copy-egs --random=true --srand=\$[JOB+$srand] ark:- $egs_list || exit 1;
 fi
@@ -387,7 +348,7 @@ if [ $stage -le 5 ]; then
 
     if $generate_egs_scp; then
       #concatenate egs.JOB.scp in single egs.scp
-      rm -rf $dir/egs.scp
+      rm $dir/egs.scp 2> /dev/null || true
       for j in $(seq $num_archives_intermediate); do
         cat $dir/egs.$j.scp || exit 1;
       done > $dir/egs.scp || exit 1;
@@ -417,7 +378,7 @@ if [ $stage -le 5 ]; then
 
     if $generate_egs_scp; then
       #concatenate egs.JOB.scp in single egs.scp
-      rm -rf $dir/egs.scp
+      rm $dir/egs.scp 2> /dev/null || true
       for j in $(seq $num_archives_intermediate); do
         for y in $(seq $num_archives_intermediate); do
           cat $dir/egs.$j.$y.scp || exit 1;
@@ -426,6 +387,10 @@ if [ $stage -le 5 ]; then
       for f in $dir/egs.*.*.scp; do rm $f; done
     fi
   fi
+fi
+
+if [ $frame_subsampling_factor -ne 1 ]; then
+  echo $frame_subsampling_factor > $dir/info/frame_subsampling_factor
 fi
 
 if [ $stage -le 6 ]; then
@@ -441,9 +406,9 @@ if [ $stage -le 6 ]; then
     # there are some extra soft links that we should delete.
     for f in $dir/egs.*.*.ark; do rm $f; done
   fi
-  echo "$0: removing temporary alignments and transforms"
+  echo "$0: removing temporary alignments"
   # Ignore errors below because trans.* might not exist.
-  rm $dir/{ali,trans}.{ark,scp} 2>/dev/null
+  rm $dir/ali.{ark,scp} 2>/dev/null
 fi
 
 echo "$0: Finished preparing training examples"

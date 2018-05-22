@@ -60,11 +60,6 @@ def get_args():
                         help="Image augmentation options")
 
     # trainer options
-    parser.add_argument("--trainer.final-combination", type=str,
-                        action=common_lib.StrToBoolAction,
-                        default=True, choices=["true", "false"],
-                        dest='final_combination',
-                        help="If false, skip final combination step")
     parser.add_argument("--trainer.prior-subset-size", type=int,
                         dest='prior_subset_size', default=20000,
                         help="Number of samples for computing priors")
@@ -131,7 +126,9 @@ def process_args(args):
 
     # set the options corresponding to args.use_gpu
     run_opts = common_train_lib.RunOpts()
-    if args.use_gpu:
+    if args.use_gpu in ["true", "false"]:
+        args.use_gpu = ("yes" if args.use_gpu == "true" else "no")
+    if args.use_gpu in ["yes", "wait"]:
         if not common_lib.check_if_cuda_compiled():
             logger.warning(
                 """You are running with one thread but you have not compiled
@@ -140,9 +137,10 @@ def process_args(args):
                    ./configure; make""")
 
         run_opts.train_queue_opt = "--gpu 1"
-        run_opts.parallel_train_opts = ""
+        run_opts.parallel_train_opts = "--use-gpu={}".format(args.use_gpu)
+        run_opts.combine_gpu_opt = "--use-gpu={}".format(args.use_gpu)
         run_opts.combine_queue_opt = "--gpu 1"
-        run_opts.prior_gpu_opt = "--use-gpu=yes"
+        run_opts.prior_gpu_opt = "--use-gpu={}".format(args.use_gpu)
         run_opts.prior_queue_opt = "--gpu 1"
 
     else:
@@ -151,6 +149,7 @@ def process_args(args):
 
         run_opts.train_queue_opt = ""
         run_opts.parallel_train_opts = "--use-gpu=no"
+        run_opts.combine_gpu_opt = "--use-gpu=no"
         run_opts.combine_queue_opt = ""
         run_opts.prior_gpu_opt = "--use-gpu=no"
         run_opts.prior_queue_opt = ""
@@ -251,7 +250,6 @@ def train(args, run_opts):
             cmvn_opts=args.cmvn_opts,
             online_ivector_dir=args.online_ivector_dir,
             samples_per_iter=args.samples_per_iter,
-            transform_dir=args.transform_dir,
             stage=args.egs_stage,
             target_type=target_type,
             num_targets=num_targets)
@@ -298,23 +296,29 @@ def train(args, run_opts):
     num_iters = ((num_archives_to_process * 2)
                  / (args.num_jobs_initial + args.num_jobs_final))
 
-    models_to_combine = common_train_lib.get_model_combine_iters(
-        num_iters, args.num_epochs,
-        num_archives_expanded, args.max_models_combine,
-        args.num_jobs_final)
+    # If do_final_combination is True, compute the set of models_to_combine.
+    # Otherwise, models_to_combine will be none.
+    if args.do_final_combination:
+        models_to_combine = common_train_lib.get_model_combine_iters(
+            num_iters, args.num_epochs,
+            num_archives_expanded, args.max_models_combine,
+            args.num_jobs_final)
+    else:
+        models_to_combine = None
 
-    if os.path.exists('{0}/valid_diagnostic.scp'.format(args.egs_dir)):
-        if os.path.exists('{0}/valid_diagnostic.egs'.format(args.egs_dir)):
+    if os.path.exists('{0}/valid_diagnostic.scp'.format(egs_dir)):
+        if os.path.exists('{0}/valid_diagnostic.egs'.format(egs_dir)):
             raise Exception('both {0}/valid_diagnostic.egs and '
                             '{0}/valid_diagnostic.scp exist.'
                             'This script expects only one of them to exist.'
-                            ''.format(args.egs_dir))
+                            ''.format(egs_dir))
         use_multitask_egs = True
     else:
-        if not os.path.exists('{0}/valid_diagnostic.egs'.format(args.egs_dir)):
+        if not os.path.exists('{0}/valid_diagnostic.egs'.format(egs_dir)):
             raise Exception('neither {0}/valid_diagnostic.egs nor '
                             '{0}/valid_diagnostic.scp exist.'
-                            'This script expects one of them.'.format(args.egs_dir))
+                            'This script expects one of them.'
+                            ''.format(egs_dir))
         use_multitask_egs = False
 
     logger.info("Training will run for {0} epochs = "
@@ -342,6 +346,19 @@ def train(args, run_opts):
                                 "shrink-value={1}".format(args.proportional_shrink,
                                                           shrinkage_value))
 
+            percent = num_archives_processed * 100.0 / num_archives_to_process
+            epoch = (num_archives_processed * args.num_epochs
+                     / num_archives_to_process)
+            shrink_info_str = ''
+            if shrinkage_value != 1.0:
+                shrink_info_str = 'shrink: {0:0.5f}'.format(shrinkage_value)
+            logger.info("Iter: {0}/{1}    "
+                        "Epoch: {2:0.2f}/{3:0.1f} ({4:0.1f}% complete)    "
+                        "lr: {5:0.6f}    {6}".format(iter, num_iters - 1,
+                                                     epoch, args.num_epochs,
+                                                     percent,
+                                                     lrate, shrink_info_str))
+
             train_lib.common.train_one_iteration(
                 dir=args.dir,
                 iter=iter,
@@ -355,6 +372,7 @@ def train(args, run_opts):
                     args.dropout_schedule,
                     float(num_archives_processed) / num_archives_to_process,
                     iter),
+                train_opts=' '.join(args.train_opts),
                 minibatch_size_str=args.minibatch_size,
                 frames_per_eg=args.frames_per_eg,
                 momentum=args.momentum,
@@ -390,14 +408,14 @@ def train(args, run_opts):
         num_archives_processed = num_archives_processed + current_num_jobs
 
     if args.stage <= num_iters:
-        if args.final_combination:
+        if args.do_final_combination:
             logger.info("Doing final combination to produce final.raw")
             train_lib.common.combine_models(
                 dir=args.dir, num_iters=num_iters,
                 models_to_combine=models_to_combine, egs_dir=egs_dir,
                 minibatch_size_str=args.minibatch_size, run_opts=run_opts,
                 get_raw_nnet_from_am=False,
-                sum_to_one_penalty=args.combine_sum_to_one_penalty,
+                max_objective_evaluations=args.max_objective_evaluations,
                 use_multitask_egs=use_multitask_egs)
         else:
             common_lib.force_symlink("{0}.raw".format(num_iters),
@@ -430,10 +448,12 @@ def train(args, run_opts):
     outputs_list = common_train_lib.get_outputs_list("{0}/final.raw".format(
         args.dir), get_raw_nnet_from_am=False)
     if 'output' in outputs_list:
-        [report, times, data] = nnet3_log_parse.generate_acc_logprob_report(args.dir)
+        [report, times, data] = nnet3_log_parse.generate_acc_logprob_report(
+            args.dir)
         if args.email is not None:
             common_lib.send_mail(report, "Update : Expt {0} : "
-                                         "complete".format(args.dir), args.email)
+                                         "complete".format(args.dir),
+                                 args.email)
 
         with open("{dir}/accuracy.{output_name}.report".format(dir=args.dir,
                                                                output_name="output"),

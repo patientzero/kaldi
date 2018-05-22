@@ -168,12 +168,11 @@ def process_args(args):
                         "directory which is the output of "
                         "make_configs.py script")
 
-    if args.transform_dir is None:
-        args.transform_dir = args.ali_dir
-
     # set the options corresponding to args.use_gpu
     run_opts = common_train_lib.RunOpts()
-    if args.use_gpu:
+    if args.use_gpu in ["true", "false"]:
+        args.use_gpu = ("yes" if args.use_gpu == "true" else "no")
+    if args.use_gpu in ["yes", "wait"]:
         if not common_lib.check_if_cuda_compiled():
             logger.warning(
                 """You are running with one thread but you have not compiled
@@ -182,9 +181,10 @@ def process_args(args):
                    ./configure; make""")
 
         run_opts.train_queue_opt = "--gpu 1"
-        run_opts.parallel_train_opts = ""
+        run_opts.parallel_train_opts = "--use-gpu={}".format(args.use_gpu)
+        run_opts.combine_gpu_opt = "--use-gpu={}".format(args.use_gpu)
         run_opts.combine_queue_opt = "--gpu 1"
-        run_opts.prior_gpu_opt = "--use-gpu=yes"
+        run_opts.prior_gpu_opt = "--use-gpu={}".format(args.use_gpu)
         run_opts.prior_queue_opt = "--gpu 1"
 
     else:
@@ -193,6 +193,7 @@ def process_args(args):
 
         run_opts.train_queue_opt = ""
         run_opts.parallel_train_opts = "--use-gpu=no"
+        run_opts.combine_gpu_opt = "--use-gpu=no"
         run_opts.combine_queue_opt = ""
         run_opts.prior_gpu_opt = "--use-gpu=no"
         run_opts.prior_queue_opt = ""
@@ -217,6 +218,10 @@ def train(args, run_opts):
 
     arg_string = pprint.pformat(vars(args))
     logger.info("Arguments for the experiment\n{0}".format(arg_string))
+
+    # Copy phones.txt from ali-dir to dir. Later, steps/nnet3/decode.sh will
+    # use it to check compatibility between training and decoding phone-sets.
+    shutil.copy('{0}/phones.txt'.format(args.ali_dir), args.dir)
 
     # Set some variables.
     num_jobs = common_lib.get_number_of_jobs(args.ali_dir)
@@ -288,7 +293,6 @@ def train(args, run_opts):
             cmvn_opts=args.cmvn_opts,
             online_ivector_dir=args.online_ivector_dir,
             samples_per_iter=args.samples_per_iter,
-            transform_dir=args.transform_dir,
             stage=args.egs_stage)
 
     if args.egs_dir is None:
@@ -347,10 +351,15 @@ def train(args, run_opts):
     num_iters = ((num_archives_to_process * 2)
                  / (args.num_jobs_initial + args.num_jobs_final))
 
-    models_to_combine = common_train_lib.get_model_combine_iters(
-        num_iters, args.num_epochs,
-        num_archives, args.max_models_combine,
-        args.num_jobs_final)
+    # If do_final_combination is True, compute the set of models_to_combine.
+    # Otherwise, models_to_combine will be none.
+    if args.do_final_combination:
+        models_to_combine = common_train_lib.get_model_combine_iters(
+            num_iters, args.num_epochs,
+            num_archives, args.max_models_combine,
+            args.num_jobs_final)
+    else:
+        models_to_combine = None
 
     min_deriv_time = None
     max_deriv_time_relative = None
@@ -392,6 +401,19 @@ def train(args, run_opts):
                                            iter, model_file,
                                            args.shrink_saturation_threshold) else 1.0)
 
+            percent = num_archives_processed * 100.0 / num_archives_to_process
+            epoch = (num_archives_processed * args.num_epochs
+                     / num_archives_to_process)
+            shrink_info_str = ''
+            if shrinkage_value != 1.0:
+                shrink_info_str = 'shrink: {0:0.5f}'.format(shrinkage_value)
+            logger.info("Iter: {0}/{1}    "
+                        "Epoch: {2:0.2f}/{3:0.1f} ({4:0.1f}% complete)    "
+                        "lr: {5:0.6f}    {6}".format(iter, num_iters - 1,
+                                                     epoch, args.num_epochs,
+                                                     percent,
+                                                     lrate, shrink_info_str))
+
             train_lib.common.train_one_iteration(
                 dir=args.dir,
                 iter=iter,
@@ -405,6 +427,7 @@ def train(args, run_opts):
                     args.dropout_schedule,
                     float(num_archives_processed) / num_archives_to_process,
                     iter),
+                train_opts=' '.join(args.train_opts),
                 shrinkage_value=shrinkage_value,
                 minibatch_size_str=args.num_chunk_per_minibatch,
                 min_deriv_time=min_deriv_time,
@@ -414,7 +437,8 @@ def train(args, run_opts):
                 shuffle_buffer_size=args.shuffle_buffer_size,
                 run_opts=run_opts,
                 backstitch_training_scale=args.backstitch_training_scale,
-                backstitch_training_interval=args.backstitch_training_interval)
+                backstitch_training_interval=args.backstitch_training_interval,
+                compute_per_dim_accuracy=args.compute_per_dim_accuracy)
 
             if args.cleanup:
                 # do a clean up everythin but the last 2 models, under certain
@@ -437,27 +461,34 @@ def train(args, run_opts):
         num_archives_processed = num_archives_processed + current_num_jobs
 
     if args.stage <= num_iters:
-        logger.info("Doing final combination to produce final.mdl")
-        train_lib.common.combine_models(
-            dir=args.dir, num_iters=num_iters,
-            models_to_combine=models_to_combine, egs_dir=egs_dir,
-            run_opts=run_opts,
-            minibatch_size_str=args.num_chunk_per_minibatch,
-            chunk_width=args.chunk_width,
-            sum_to_one_penalty=args.combine_sum_to_one_penalty)
+        if args.do_final_combination:
+            logger.info("Doing final combination to produce final.mdl")
+            train_lib.common.combine_models(
+                dir=args.dir, num_iters=num_iters,
+                models_to_combine=models_to_combine, egs_dir=egs_dir,
+                run_opts=run_opts,
+                minibatch_size_str=args.num_chunk_per_minibatch,
+                chunk_width=args.chunk_width,
+                max_objective_evaluations=args.max_objective_evaluations,
+                compute_per_dim_accuracy=args.compute_per_dim_accuracy)
 
     if args.stage <= num_iters + 1:
         logger.info("Getting average posterior for purposes of "
                     "adjusting the priors.")
+
+        # If args.do_final_combination is true, we will use the combined model.
+        # Otherwise, we will use the last_numbered model.
+        real_iter = 'combined' if args.do_final_combination else num_iters
         avg_post_vec_file = train_lib.common.compute_average_posterior(
-            dir=args.dir, iter='combined', egs_dir=egs_dir,
+            dir=args.dir, iter=real_iter, egs_dir=egs_dir,
             num_archives=num_archives,
             prior_subset_size=args.prior_subset_size, run_opts=run_opts)
 
         logger.info("Re-adjusting priors based on computed posteriors")
-        combined_model = "{dir}/combined.mdl".format(dir=args.dir)
+        combined_or_last_numbered_model = "{dir}/{iter}.mdl".format(dir=args.dir,
+                iter=real_iter)
         final_model = "{dir}/final.mdl".format(dir=args.dir)
-        train_lib.common.adjust_am_priors(args.dir, combined_model,
+        train_lib.common.adjust_am_priors(args.dir, combined_or_last_numbered_model,
                                           avg_post_vec_file, final_model,
                                           run_opts)
 

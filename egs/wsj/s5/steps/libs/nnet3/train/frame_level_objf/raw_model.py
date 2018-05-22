@@ -21,11 +21,10 @@ def generate_egs_using_targets(data, targets_scp, egs_dir,
                                left_context, right_context,
                                run_opts, stage=0,
                                left_context_initial=-1, right_context_final=-1,
-                               feat_type='raw', online_ivector_dir=None,
+                               online_ivector_dir=None,
                                target_type='dense', num_targets=-1,
                                samples_per_iter=20000, frames_per_eg_str="20",
-                               srand=0, egs_opts=None, cmvn_opts=None,
-                               transform_dir=None):
+                               srand=0, egs_opts=None, cmvn_opts=None):
     """ Wrapper for calling steps/nnet3/get_egs_targets.sh
 
     This method generates egs directly from an scp file of targets, instead of
@@ -52,8 +51,6 @@ def generate_egs_using_targets(data, targets_scp, egs_dir,
         """steps/nnet3/get_egs_targets.sh {egs_opts} \
                 --cmd "{command}" \
                 --cmvn-opts "{cmvn_opts}" \
-                --feat-type {feat_type} \
-                --transform-dir "{transform_dir}" \
                 --online-ivector-dir "{ivector_dir}" \
                 --left-context {left_context} \
                 --right-context {right_context} \
@@ -68,10 +65,6 @@ def generate_egs_using_targets(data, targets_scp, egs_dir,
                 {data} {targets_scp} {egs_dir}
         """.format(command=run_opts.egs_command,
                    cmvn_opts=cmvn_opts if cmvn_opts is not None else '',
-                   feat_type=feat_type,
-                   transform_dir=(transform_dir
-                                  if transform_dir is not None
-                                  else ''),
                    ivector_dir=(online_ivector_dir
                                 if online_ivector_dir is not None
                                 else ''),
