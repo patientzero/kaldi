@@ -63,7 +63,7 @@ do
     utt=`cat $uttPath".par" | grep ^ORT \
 	| awk '{printf "%s ", $3} END{print ""}' | sed 's/ $//g'`
 
-    if grep -Fq "$spk" $dir/testspeaker; then
+    if grep -Fq "$spkId" $dir/testspeaker; then
         echo $spkId"_"$uttId $utt >> $test/text0
         echo $spkId"_"$uttId $spkId >> $test/utt2spk0
         echo $spkId"_"$uttId $uttPath".wav" >> $test/wav0.scp
