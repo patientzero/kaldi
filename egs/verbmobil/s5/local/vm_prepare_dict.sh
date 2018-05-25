@@ -35,7 +35,7 @@ grep -v '^#' $dir/lexicon0.txt | awk 'NF>0' | sort > $dir/lexicon1.txt || exit 1
 cat $dir/lexicon1.txt | awk '{ for(n=2;n<=NF;n++){ phones[$n] = 1; }} END{for (p in phones) print p;}' | \
     grep -v sil > $dir/nonsilence_phones.txt  || exit 1;
 
-( echo sil; echo spn; echo nsn; echo lau ) > $dir/silence_phones.txt
+( echo sil; echo spn; echo nsn; echo lau ) > $dir/silence_phones.txt # silence, spoken noice, non spoken noise, laughter
 
 echo sil > $dir/optional_silence.txt
 
