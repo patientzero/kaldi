@@ -3,6 +3,11 @@
 
 # To be run from one directory above this script.
 
+# This script takes no arguments.  It assumes you have already run
+# vm_data_prep.sh
+# It takes as input the files
+# data/local/train/text
+# data/local/dict/lexicon.txt
 
 text=data/train/text
 lexicon=data/local/dict_nosp/lexicon.txt
@@ -11,11 +16,6 @@ for f in "$text" "$lexicon"; do
   [ ! -f $x ] && echo "$0: No such file $f" && exit 1;
 done
 
-# This script takes no arguments.  It assumes you have already run
-# vm_data_prep.sh
-# It takes as input the files
-#data/local/train/text
-#data/local/dict/lexicon.txt
 dir=data/local/lm
 mkdir -p $dir
 export LC_ALL=C # You'll get errors about things being not sorted, if you
@@ -37,9 +37,6 @@ export PATH=$PATH:`pwd`/../../../tools/kaldi_lm
  fi
 ) || exit 1;
 
-mkdir -p $dir
-
-
 cleantext=$dir/text.no_oov
 
 cat $text | awk -v lex=$lexicon 'BEGIN{while((getline<lex) >0){ seen[$1]=1; } } 
@@ -49,14 +46,14 @@ cat $text | awk -v lex=$lexicon 'BEGIN{while((getline<lex) >0){ seen[$1]=1; } }
 
 cat $cleantext | awk '{for(n=2;n<=NF;n++) print $n; }' | sort | uniq -c | \
    sort -nr > $dir/word.counts || exit 1;
-
-
 # Get counts from acoustic training transcripts, and add  one-count
 # for each word in the lexicon (but not silence, we don't want it
 # in the LM-- we'll add it optionally later).
+# Fix silence from !SIL to !sil to fit the data
+
 cat $cleantext | awk '{for(n=2;n<=NF;n++) print $n; }' | \
-  cat - <(grep -w -v '!SIL' $lexicon | awk '{print $1}') | \
-   sort | uniq -c | sort -nr > $dir/unigram.counts || exit 1;
+  cat - <(grep -w -v '!sil' $lexicon | awk '{print $1}') | \
+  sort | uniq -c | sort -nr > $dir/unigram.counts || exit 1;
 
 # note: we probably won't really make use of <UNK> as there aren't any OOVs
 cat $dir/unigram.counts  | awk '{print $2}' | get_word_map.pl "<s>" "</s>" "<UNK>" > $dir/word_map \
