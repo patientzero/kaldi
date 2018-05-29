@@ -44,15 +44,15 @@ cat $dir/data_uttId_uttP_train_tmp.flist | sort |uniq > $dir/data_uttId_uttP_tra
 rm $dir/data_uttId_uttP_train_tmp.flist
 
 # split n speaker for testing
-n=10
-echo "Split $n speaker from data for testing"
-while read uttIduttP
-do
-    uttId=`echo $uttIduttP | cut -d" " -f1`
-    echo ${uttId: (-3)} >> $dir/speakerIds    
-done < $dir/data_uttId_uttP_train.flist
-cat $dir/speakerIds | sort | uniq | head -$n > $dir/testspeaker
-rm $dir/speakerIds
+# n=10
+# echo "Split $n speaker from data for testing"
+# while read uttIduttP
+# do
+#     uttId=`echo $uttIduttP | cut -d" " -f1`
+#     echo ${uttId: (-3)} >> $dir/speakerIds    
+# done < $dir/data_uttId_uttP_train.flist
+# cat $dir/speakerIds | sort | uniq | head -$n > $dir/testspeaker
+# rm $dir/speakerIds
 
 echo "Create train and test Data for $dir/data_uttId_uttP_train.flist"
 while read uttIduttP
@@ -63,31 +63,31 @@ do
     utt=`cat $uttPath".par" | grep ^ORT \
 	| awk '{printf "%s ", $3} END{print ""}' | sed 's/ $//g'`
 
-    if grep -Fq "$spkId" $dir/testspeaker; then
-        echo $spkId"_"$uttId $utt >> $test/text0
-        echo $spkId"_"$uttId $spkId >> $test/utt2spk0
-        echo $spkId"_"$uttId $uttPath".wav" >> $test/wav0.scp
-    else
+    # if grep -Fq "$spkId" $dir/testspeaker; then
+    #     echo $spkId"_"$uttId $utt >> $test/text0
+    #     echo $spkId"_"$uttId $spkId >> $test/utt2spk0
+    #     echo $spkId"_"$uttId $uttPath".wav" >> $test/wav0.scp
+    # else
         echo $spkId"_"$uttId $utt >> $train/text0
         echo $spkId"_"$uttId $spkId >> $train/utt2spk0
         echo $spkId"_"$uttId $uttPath".wav" >> $train/wav0.scp
 
-    fi
+    # fi
 done < $dir/data_uttId_uttP_train.flist
 
-cat $test/text0 | uniq | sort > $test/text
-cat $test/utt2spk0 | uniq | sort > $test/utt2spk
-cat $test/wav0.scp | uniq | sort > $test/wav.scp
+# cat $test/text0 | uniq | sort > $test/text
+# cat $test/utt2spk0 | uniq | sort > $test/utt2spk
+# cat $test/wav0.scp | uniq | sort > $test/wav.scp
 
 cat $train/text0 | uniq | sort > $train/text
 cat $train/utt2spk0 | uniq | sort > $train/utt2spk
 cat $train/wav0.scp | uniq | sort > $train/wav.scp
 
 echo "Cleanup temporary files"
-rm $test/text0 $test/utt2spk0 $test/wav0.scp
+# rm $test/text0 $test/utt2spk0 $test/wav0.scp
 rm $train/text0 $train/utt2spk0 $train/wav0.scp
 
 # Create spk2utt File from utt2spk
 echo "Create Speaker2Utterance file"
+# cat $test/utt2spk | utils/utt2spk_to_spk2utt.pl > $test/spk2utt
 cat $train/utt2spk | utils/utt2spk_to_spk2utt.pl > $train/spk2utt
-cat $test/utt2spk | utils/utt2spk_to_spk2utt.pl > $test/spk2utt

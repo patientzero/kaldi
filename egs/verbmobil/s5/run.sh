@@ -8,7 +8,7 @@ export LC_ALL=C
 set -e # exit on error
 decode=true
 
-nj=20
+nj=40
 #vm1=/export/VM1/
 #vm2=/export/VM2/
 vm1=/mnt/raid0/data/VM1
@@ -26,26 +26,37 @@ echo "prepare_dict"
 local/vm_prepare_dict.sh $vm1 $vm2
 
 # prepare language
+pos_dep_phones=true
+
 echo "prepare_lang"
-utils/prepare_lang.sh data/local/dict_nosp \
-    "<unk>" data/local/lang_nosp data/lang_nosp
+utils/prepare_lang.sh --position-dependent-phones $pos_dep_phones \
+    data/local/dict_nosp "<unk>" data/local/lang_nosp data/lang_nosp 
 
 local/vm_train_lms.sh
 local/vm_format_data.sh
 # note to self: works till here, LC_ALL must be introduced in prepare_lang and or prepare dict, after that problems with sort, broken pipe, duplciates
 # create MFCC features
-steps/make_mfcc.sh --cmd "$train_cmd" --nj $nj data/train
-steps/compute_cmvn_stats.sh data/train
+steps/make_mfcc.sh --cmd "$train_cmd" --nj $nj data/all
+steps/compute_cmvn_stats.sh data/all
 
-# 24425 data count
-utils/subset_data_dir.sh --first data/train 6000 data/train_6k
-utils/subset_data_dir.sh --shortest data/train 2000 data/train_2kshort #https://stackoverflow.com/questions/46202653/bash-error-in-sort-sort-write-failed-standard-output-broken-pipe
-utils/subset_data_dir.sh data/train 12200 data/train_half
+# Do i have to do this for test data also?
+
+# 24425 data count assuming no test data was split
+# 24135 if split first 10 speaker for testing
+
+utils/subset_data_dir.sh --first data/all 2425 data/test 
+utils/subset_data_dir.sh data/all --last 22000 data/train
+utils/subset_data_dir.sh --shortest data/train 2000 data/train_2kshort # https://stackoverflow.com/questions/46202653/bash-error-in-sort-sort-write-failed-standard-output-broken-pipe
+utils/subset_data_dir.sh --last data/all 6000 data/train_6k
+utils/subset_data_dir.sh data/train 12000 data/train_half
+
 
 
 # train Mono
 steps/train_mono.sh --boost-silence 1.25 --nj $nj --cmd "$train_cmd" \
     data/train_2kshort data/lang_nosp exp/mono0a
+# exp/mono0a: nj=20 align prob=-95.95 over 0.29h [retry=0.0%, fail=0.0%] states=149 gauss=991
+# steps/train_mono.sh: Done training monophone system in exp/mono0a
 
 if $decode; then
     utils/mkgraph.sh data/lang_nosp exp/mono0a exp/mono0a/graph_nosp
@@ -53,7 +64,12 @@ if $decode; then
     steps/decode.sh --nj $nj --cmd "$decode_cmd" exp/mono0a/graph_nosp \
 	data/train_2kshort exp/mono0a/decode_nosp_train # local score could not be called, also score basic and sclite could not be called
 fi
-
+# steps/diagnostic/analyze_lats.sh --cmd run.pl exp/mono0a/graph_nosp exp/mono0a/decode_nosp_train
+# analyze_phone_length_stats.py: WARNING: optional-silence sil is seen only 67.95% of the time at utterance end.  This may not be optimal.
+# steps/diagnostic/analyze_lats.sh: see stats in exp/mono0a/decode_nosp_train/log/analyze_alignments.log
+# Overall, lattice depth (10,50,90-percentile)=(1,1,7) and mean=3.4
+# steps/diagnostic/analyze_lats.sh: see stats in exp/mono0a/decode_nosp_train/log/analyze_lattice_depth_stats.log
+# data/train_2kshort/stm does not exist: using local/score_basic.sh
 
 # train tri1
 steps/align_si.sh --boost-silence 1.25 --nj $nj --cmd "$train_cmd" \
@@ -78,11 +94,15 @@ steps/train_lda_mllt.sh --cmd "$train_cmd" \
     --splice-opts "--left-context=3 --right-context=3" \
     2500 15000 data/train_half data/lang_nosp exp/tri1_ali exp/tri2b
 
+# exp/tri2b: nj=20 align prob=-49.05 over 22.61h [retry=10.8%, fail=0.8%] states=2064 gauss=15034 tree-impr=3.85 lda-sum=16.01 mllt:impr,logdet=1.14,1.65
+# steps/train_lda_mllt.sh: Done training system with LDA+MLLT features in exp/tri2b
+
 if $decode; then
     utils/mkgraph.sh data/lang_nosp exp/tri2b exp/tri2b/graph_nosp
 
     steps/decode.sh --nj $nj --cmd "$decode_cmd" exp/tri2b/graph_nosp \
 	data/train_half exp/tri2b/decode_nosp_train2kshort
+
 fi
 
 # train tri3b
@@ -97,6 +117,9 @@ if $decode; then
 
     steps/decode.sh --nj $nj --cmd "$decode_cmd" exp/tri3b/graph_nosp \
 	data/train exp/tri3b/decode_nosp_train
+
+    steps/decode.sh --nj $nj --cmd "$decode_cmd" exp/tri3b/graph_nosp \
+	data/train exp/tri3b/decode_nosp_test
 fi
 ## Ende 09.05.18
 # Estimate pronunciation and silence probabilities.
