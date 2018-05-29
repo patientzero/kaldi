@@ -13,7 +13,8 @@ vm1_dir=$1
 vm2_dir=$2
 
 dir=data/local/data
-train=data/train
+# train=data/train
+train=data/all
 test=data/test
 
 mkdir -p $dir $train $test
