@@ -9,8 +9,7 @@
 # data/local/train/text
 # data/local/dict/lexicon.txt
 
-# text=data/train/text
-text=data/all/text
+text=data/train/text
 lexicon=data/local/dict_nosp/lexicon.txt
 
 for f in "$text" "$lexicon"; do
@@ -72,7 +71,6 @@ train_lm.sh --arpa --lmtype 3gram-mincount $dir || exit 1;
 
 # note: output is
 # data/local/lm/3gram-mincount/lm_unpruned.gz 
-
 exit 0
 
 
@@ -95,15 +93,7 @@ ngram-count -text $sdir/train -order 3 -limit-vocab -vocab $sdir/wordlist -unk \
 ngram -lm $sdir/srilm.o3g.kn.gz -ppl $sdir/heldout 
 # 0 zeroprobs, logprob= -250954 ppl= 90.5091 ppl1= 132.482
 
-# With Split of 10 Speakers:
-# file data/local/lm/srilm/heldout: 10000 sentences, 166857 words, 0 OOVs
-# 0 zeroprobs, logprob= -359090.3 ppl= 107.2504 ppl1= 141.9331
-
 # Note: perplexity SRILM gives to Kaldi-LM model is same as kaldi-lm reports above.
 # Difference in WSJ must have been due to different treatment of <UNK>.
 ngram -lm $dir/3gram-mincount/lm_unpruned.gz  -ppl $sdir/heldout 
 # 0 zeroprobs, logprob= -250913 ppl= 90.4439 ppl1= 132.379
-
-# With Split of 10 Speakes: 
-# file data/local/lm/srilm/heldout: 10000 sentences, 166857 words, 0 OOVs
-# 0 zeroprobs, logprob= -360664.5 ppl= 109.4713 ppl1= 145.0503
