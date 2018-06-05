@@ -32,38 +32,37 @@ echo "prepare_lang"
 utils/prepare_lang.sh --position-dependent-phones $pos_dep_phones \
     data/local/dict_nosp "<unk>" data/local/lang_nosp data/lang_nosp 
 
+
+# make configurable with src directory of text and data, so it can be easily switchted between train/all/etc for splitting
 local/vm_train_lms.sh
 local/vm_format_data.sh
-# note to self: works till here, LC_ALL must be introduced in prepare_lang and or prepare dict, after that problems with sort, broken pipe, duplciates
-# create MFCC features
-steps/make_mfcc.sh --cmd "$train_cmd" --nj $nj data/all
-steps/compute_cmvn_stats.sh data/all
-
-# Do i have to do this for test data also?
-
-# 24425 data count assuming no test data was split
-# 24135 if split first 10 speaker for testing
-
-utils/subset_data_dir.sh --first data/all 2425 data/test 
-utils/subset_data_dir.sh data/all --last 22000 data/train
-utils/subset_data_dir.sh --shortest data/train 2000 data/train_2kshort # https://stackoverflow.com/questions/46202653/bash-error-in-sort-sort-write-failed-standard-output-broken-pipe
-utils/subset_data_dir.sh --last data/all 6000 data/train_6k
-utils/subset_data_dir.sh data/train 12000 data/train_half
+# LC_ALL=c must be introduced in prepare_lang and or prepare dict, after that problems with sort, broken pipe, duplciates
+# create MFCC features and compute cmvn for train an testdata
+steps/make_mfcc.sh --cmd "$train_cmd" --nj $nj data/train
+steps/compute_cmvn_stats.sh data/train
+steps/make_mfcc.sh --cmd "$train_cmd" --nj $nj data/test
+steps/compute_cmvn_stats.sh data/test
 
 
 
-# train Mono
+# 24425 data count in trainset, split 6k utterances for monophone training
+
+# utils/subset_data_dir.sh --shortest data/train 2000 data/train_2kshort # https://stackoverflow.com/questions/46202653/bash-error-in-sort-sort-write-failed-standard-output-broken-pipe
+utils/subset_data_dir.sh --last data/train 6000 data/train_6k
+
+
+# train mono
+
 steps/train_mono.sh --boost-silence 1.25 --nj $nj --cmd "$train_cmd" \
-    data/train_2kshort data/lang_nosp exp/mono0a
-# exp/mono0a: nj=20 align prob=-95.95 over 0.29h [retry=0.0%, fail=0.0%] states=149 gauss=991
-# steps/train_mono.sh: Done training monophone system in exp/mono0a
+    data/train_6k data/lang_nosp exp/mono0a
 
 if $decode; then
     utils/mkgraph.sh data/lang_nosp exp/mono0a exp/mono0a/graph_nosp
 
     steps/decode.sh --nj $nj --cmd "$decode_cmd" exp/mono0a/graph_nosp \
-	data/train_2kshort exp/mono0a/decode_nosp_train # local score could not be called, also score basic and sclite could not be called
+	data/test exp/mono0a/decode_nosp_test # local score could not be called, also score basic and sclite could not be called
 fi
+
 # steps/diagnostic/analyze_lats.sh --cmd run.pl exp/mono0a/graph_nosp exp/mono0a/decode_nosp_train
 # analyze_phone_length_stats.py: WARNING: optional-silence sil is seen only 67.95% of the time at utterance end.  This may not be optimal.
 # steps/diagnostic/analyze_lats.sh: see stats in exp/mono0a/decode_nosp_train/log/analyze_alignments.log
@@ -72,56 +71,77 @@ fi
 # data/train_2kshort/stm does not exist: using local/score_basic.sh
 
 # train tri1
+
 steps/align_si.sh --boost-silence 1.25 --nj $nj --cmd "$train_cmd" \
-    data/train_6k data/lang_nosp exp/mono0a exp/mono0a_ali
+    data/train data/lang_nosp exp/mono0a exp/mono0a_ali
 
 steps/train_deltas.sh --boost-silence 1.25 --cmd "$train_cmd" \
-    2000 10000 data/train_6k data/lang_nosp  exp/mono0a_ali exp/tri1
+    2000 10000 data/train data/lang_nosp  exp/mono0a_ali exp/tri1
 
 if $decode; then
     utils/mkgraph.sh data/lang_nosp exp/tri1 exp/tri1/graph_nosp
 
     steps/decode.sh --nj $nj --cmd "$decode_cmd" exp/tri1/graph_nosp \
-	data/train_6k exp/tri1/decode_nosp_train6k
+	data/test exp/tri1/decode_nosp_test
+    # steps/decode.sh --nj $nj --cmd "$decode_cmd" exp/tri1/graph_nosp \
+	# data/train_6k exp/tri1/decode_nosp_train6k
 fi
-## Ende 08.05.18 17h
 
-# train tri2b
+# train tri2a
+
 steps/align_si.sh --nj $nj --cmd "$train_cmd" \
-    data/train_half data/lang_nosp exp/tri1 exp/tri1_ali
+    --use-graphs true data/train data/lang_nosp exp/tri1 exp/tri1_ali
+
+steps/train_deltas.sh --cmd "$train_cmd" \
+    2500 15000 data/train data/lang_nosp exp/tri1_ali exp/tri2a 
+
+if $decode; then
+    utils/mkgraph.sh data/lang_nosp exp/tri2a exp/tri2a/graph_nosp 
+
+    steps/decode.sh --nj $nj --cmd "$decode_cmd" exp/tri2a/graph_nosp \
+    data/test exp/tri2a/decode_nosp_test
+fi
+
+# train tri3a 
+
+steps/align_si.sh --nj $nj --cmd "$train_cmd" \
+    data/train data/lang_nosp exp/tri2a exp/tri2a_ali
 
 steps/train_lda_mllt.sh --cmd "$train_cmd" \
     --splice-opts "--left-context=3 --right-context=3" \
-    2500 15000 data/train_half data/lang_nosp exp/tri1_ali exp/tri2b
+    3500 20000 data/train data/lang_nosp exp/tri2a_ali exp/tri3a
 
 # exp/tri2b: nj=20 align prob=-49.05 over 22.61h [retry=10.8%, fail=0.8%] states=2064 gauss=15034 tree-impr=3.85 lda-sum=16.01 mllt:impr,logdet=1.14,1.65
 # steps/train_lda_mllt.sh: Done training system with LDA+MLLT features in exp/tri2b
 
 if $decode; then
-    utils/mkgraph.sh data/lang_nosp exp/tri2b exp/tri2b/graph_nosp
+    utils/mkgraph.sh data/lang_nosp exp/tri3a exp/tri3a/graph_nosp
 
-    steps/decode.sh --nj $nj --cmd "$decode_cmd" exp/tri2b/graph_nosp \
-	data/train_half exp/tri2b/decode_nosp_train2kshort
+    steps/decode.sh --nj $nj --cmd "$decode_cmd" exp/tri3a/graph_nosp \
+	data/test exp/tri3a/decode_nosp_test
 
 fi
 
-# train tri3b
+# train tri4a
+
 steps/align_si.sh --nj $nj --cmd "$train_cmd" \
-    data/train data/lang_nosp exp/tri2b exp/tri2b_ali
+    data/train data/lang_nosp exp/tri3a exp/tri3a_ali
 
 steps/train_sat.sh --cmd "$train_cmd" 4200 40000 \
-    data/train data/lang_nosp exp/tri2b_ali exp/tri3b
+    data/train data/lang_nosp exp/tri3a_ali exp/tri4a
 
 if $decode; then
-    utils/mkgraph.sh data/lang_nosp exp/tri3b exp/tri3b/graph_nosp
+    utils/mkgraph.sh data/lang_nosp exp/tri4a exp/tri4a/graph_nosp
 
-    steps/decode.sh --nj $nj --cmd "$decode_cmd" exp/tri3b/graph_nosp \
-	data/train exp/tri3b/decode_nosp_train
+    steps/decode.sh --nj $nj --cmd "$decode_cmd" exp/tri4a/graph_nosp \
+	data/test exp/tri4a/decode_nosp_train
 
-    steps/decode.sh --nj $nj --cmd "$decode_cmd" exp/tri3b/graph_nosp \
-	data/train exp/tri3b/decode_nosp_test
 fi
-## Ende 09.05.18
+
+# Make final alignements for further training in a neural net
+steps/align_si.sh --nj $nj --cmd "$train_cmd" \
+    data/train data/lang_nosp exp/tri4a exp/tri4a_ali
+
 # Estimate pronunciation and silence probabilities.
 # steps/get_prons.sh --cmd "$train_cmd" \
 #     data/train data/lang_nosp exp/tri3b
@@ -133,25 +153,3 @@ fi
 
 # utils/prepare_lang.sh data/local/dict_nosp \
 #   "<SPOKEN_NOISE>" data/local/lang_nosp data/lang_nosp # macht shit, why?
-
-
-# mkdir -p data/lang_test/
-# cp -r data/lang/* data/lang_test/
-# rm -rf data/lang_test/tmp
-# cp data/lang_nosp/G.* data/lang_test/
-
-# From 3b system, now using data/lang as the lang directory (we have now added
-# pronunciation and silence probabilities), train another SAT system (tri4b).
-#train tri4b
-steps/align_si.sh --nj 20 --cmd "$train_cmd" \
-    data/train data/lang_nosp exp/tri3b exp/tri3b_ali
-
-steps/train_sat.sh --cmd "$train_cmd" \
-    4200 40000 data/train data/lang_nosp exp/tri3b_ali exp/tri4b 
-
-if $decode; then
-    utils/mkgraph.sh data/lang_nosp exp/tri4b exp/tri4b/graph_nosp
-
-    steps/decode.sh --nj $nj --cmd "$decode_cmd" exp/tri4b/graph_nosp \
-	data/train exp/tri4b/decode_nosp_train
-fi
