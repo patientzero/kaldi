@@ -13,8 +13,7 @@ vm1_dir=$1
 vm2_dir=$2
 
 dir=data/local/data
-# train=data/train
-train=data/all
+train=data/train
 test=data/test
 
 mkdir -p $dir $train $test
@@ -32,7 +31,6 @@ utils=`pwd`/utils
 # Expect vm_dic_download to be run first
 # Create flist from VM1 and VM2 with Utterance Infos and
 # Path to the utterance Directory
-# fixed directory substring, otherwise no data was found
 cat $vm1_dir/VM1_TRAIN \
     | awk '{printf("%s '$vm1_dir'/%s/%s\n", $1, substr($1,0,5), $1)}' \
     > $dir/data_uttId_uttP_train_tmp.flist
@@ -41,21 +39,20 @@ cat $vm2_dir/VM2_TRAIN \
     | awk '{printf("%s '$vm2_dir'/%s/%s\n", $1, substr($1,0,5), $1)}' \
     >> $dir/data_uttId_uttP_train_tmp.flist
 
+cat $vm1_dir/VM1_TEST \
+    | awk '{printf("%s '$vm1_dir'/%s/%s\n", $1, substr($1,0,5), $1)}' \
+    > $dir/data_uttId_uttP_test_tmp.flist
+
+cat $vm2_dir/VM2_TEST \
+    | awk '{printf("%s '$vm2_dir'/%s/%s\n", $1, substr($1,0,5), $1)}' \
+    >> $dir/data_uttId_uttP_test_tmp.flist
+
 cat $dir/data_uttId_uttP_train_tmp.flist | sort |uniq > $dir/data_uttId_uttP_train.flist
-rm $dir/data_uttId_uttP_train_tmp.flist
+cat $dir/data_uttId_uttP_test_tmp.flist | sort |uniq > $dir/data_uttId_uttP_test.flist
+rm $dir/data_uttId_uttP_train_tmp.flist $dir/data_uttId_uttP_test_tmp.flist
 
-# split n speaker for testing
-# n=10
-# echo "Split $n speaker from data for testing"
-# while read uttIduttP
-# do
-#     uttId=`echo $uttIduttP | cut -d" " -f1`
-#     echo ${uttId: (-3)} >> $dir/speakerIds    
-# done < $dir/data_uttId_uttP_train.flist
-# cat $dir/speakerIds | sort | uniq | head -$n > $dir/testspeaker
-# rm $dir/speakerIds
 
-echo "Create train and test Data for $dir/data_uttId_uttP_train.flist"
+echo "Create train data for $dir/data_uttId_uttP_train.flist"
 while read uttIduttP
 do
     uttId=`echo $uttIduttP | cut -d" " -f1`
@@ -63,32 +60,36 @@ do
     spkId=${uttId: (-3)}
     utt=`cat $uttPath".par" | grep ^ORT \
 	| awk '{printf "%s ", $3} END{print ""}' | sed 's/ $//g'`
-
-    # if grep -Fq "$spkId" $dir/testspeaker; then
-    #     echo $spkId"_"$uttId $utt >> $test/text0
-    #     echo $spkId"_"$uttId $spkId >> $test/utt2spk0
-    #     echo $spkId"_"$uttId $uttPath".wav" >> $test/wav0.scp
-    # else
         echo $spkId"_"$uttId $utt >> $train/text0
         echo $spkId"_"$uttId $spkId >> $train/utt2spk0
-        echo $spkId"_"$uttId $uttPath".wav" >> $train/wav0.scp
-
-    # fi
+        echo $spkId"_"$uttId $uttPath".wav" >> $train/wav0.scp    
 done < $dir/data_uttId_uttP_train.flist
 
-# cat $test/text0 | uniq | sort > $test/text
-# cat $test/utt2spk0 | uniq | sort > $test/utt2spk
-# cat $test/wav0.scp | uniq | sort > $test/wav.scp
+while read uttIduttP
+do
+    uttId=`echo $uttIduttP | cut -d" " -f1`
+    uttPath=`echo $uttIduttP | cut -d" " -f2`
+    spkId=${uttId: (-3)}
+    utt=`cat $uttPath".par" | grep ^ORT \
+	| awk '{printf "%s ", $3} END{print ""}' | sed 's/ $//g'`
+        echo $spkId"_"$uttId $utt >> $test/text0
+        echo $spkId"_"$uttId $spkId >> $test/utt2spk0
+        echo $spkId"_"$uttId $uttPath".wav" >> $test/wav0.scp    
+done < $dir/data_uttId_uttP_test.flist
+
+cat $test/text0 | uniq | sort > $test/text
+cat $test/utt2spk0 | uniq | sort > $test/utt2spk
+cat $test/wav0.scp | uniq | sort > $test/wav.scp
 
 cat $train/text0 | uniq | sort > $train/text
 cat $train/utt2spk0 | uniq | sort > $train/utt2spk
 cat $train/wav0.scp | uniq | sort > $train/wav.scp
 
 echo "Cleanup temporary files"
-# rm $test/text0 $test/utt2spk0 $test/wav0.scp
+rm $test/text0 $test/utt2spk0 $test/wav0.scp
 rm $train/text0 $train/utt2spk0 $train/wav0.scp
 
 # Create spk2utt File from utt2spk
 echo "Create Speaker2Utterance file"
-# cat $test/utt2spk | utils/utt2spk_to_spk2utt.pl > $test/spk2utt
+cat $test/utt2spk | utils/utt2spk_to_spk2utt.pl > $test/spk2utt
 cat $train/utt2spk | utils/utt2spk_to_spk2utt.pl > $train/spk2utt
