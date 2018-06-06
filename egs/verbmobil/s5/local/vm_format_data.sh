@@ -4,14 +4,14 @@
 if [ -f path.sh ]; then . path.sh; fi
 
 silprob=0.5
-lang_dir=data/lang_nosp/
+lang_dir=data/lang_nosp
 
 arpa_lm=data/local/lm/3gram-mincount/lm_unpruned.gz
 [ ! -f $arpa_lm ] && echo No such file $arpa_lm && exit 1;
 
 gunzip -c "$arpa_lm" | \
     arpa2fst --disambig-symbol=#0 \
-    --read-symbol-table=data/lang_nosp/words.txt - $lang_dir/G.fst
+    --read-symbol-table=$lang_dir/words.txt - $lang_dir/G.fst
 
 
 echo  "Checking how stochastic G is (the first of these numbers should be small):"
