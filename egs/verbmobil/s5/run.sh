@@ -5,7 +5,7 @@
 
 export LC_ALL=C
 
-# set -e # exit on error
+set -e # exit on error
 decode=true
 
 nj=40
@@ -50,7 +50,6 @@ steps/compute_cmvn_stats.sh data/test
 # utils/subset_data_dir.sh --shortest data/train 2000 data/train_2kshort # https://stackoverflow.com/questions/46202653/bash-error-in-sort-sort-write-failed-standard-output-broken-pipe
 utils/subset_data_dir.sh data/train 6000 data/train_6k
 
-# YOU ARE HERE AT THE MOMENT
 
 # train mono
 
@@ -74,7 +73,7 @@ fi
 # train tri1
 
 steps/align_si.sh --boost-silence 1.25 --nj $nj --cmd "$train_cmd" \
-    data/train data/lang_nosp exp/mono0a exp/mono0a_ali
+    data/train_6k data/lang_nosp exp/mono0a exp/mono0a_ali
 
 steps/train_deltas.sh --boost-silence 1.25 --cmd "$train_cmd" \
     2000 10000 data/train data/lang_nosp  exp/mono0a_ali exp/tri1
@@ -139,6 +138,7 @@ if $decode; then
 
 fi
 
+# YOU ARE HERE AT THE MOMENT
 # Make final alignements for further training in a neural net
 steps/align_si.sh --nj $nj --cmd "$train_cmd" \
     data/train data/lang_nosp exp/tri4a exp/tri4a_ali
