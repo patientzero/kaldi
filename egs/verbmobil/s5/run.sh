@@ -55,7 +55,7 @@ utils/subset_data_dir.sh data/train 6000 data/train_6k
 echo "***** Start monophone training ***** " 
 
 steps/train_mono.sh --boost-silence 1.25 --nj $nj --cmd "$train_cmd" \
-    data/train_6k data/lang_nosp exp/mono0a
+    data/train data/lang_nosp exp/mono0a
 
 if $decode; then
     utils/mkgraph.sh data/lang_nosp exp/mono0a exp/mono0a/graph_nosp
@@ -74,7 +74,7 @@ fi
 # train tri1
 echo "***** Aign monophones ***** " 
 steps/align_si.sh --boost-silence 1.25 --nj $nj --cmd "$train_cmd" \
-    data/train_6k data/lang_nosp exp/mono0a exp/mono0a_ali
+    data/train data/lang_nosp exp/mono0a exp/mono0a_ali
 
 echo "***** Start training delta based triphones ***** "
 
@@ -135,7 +135,7 @@ fi
 # train tri4a
 echo "***** Align LDA-MLLT triphones ***** " #better with align_fmllr.sh?
 
-steps/align_si.sh --nj $nj --cmd "$train_cmd" \
+steps/align_fmllr.sh --nj $nj --cmd "$train_cmd" \
     data/train data/lang_nosp exp/tri3a exp/tri3a_ali
 
 echo "***** Train SAT triphones ***** " 
@@ -154,7 +154,7 @@ fi
 # YOU ARE HERE AT THE MOMENT
 # Make final alignements for further training in a neural net
 echo "***** Align SAT triphones ***** " # better with aling_fmlrr.sh ? 
-steps/align_si.sh --nj $nj --cmd "$train_cmd" \
+steps/align_fmllr.sh --nj $nj --cmd "$train_cmd" \
     data/train data/lang_nosp exp/tri4a exp/tri4a_ali
 
 # Estimate pronunciation and silence probabilities.
