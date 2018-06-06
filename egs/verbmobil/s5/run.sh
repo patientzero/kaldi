@@ -52,6 +52,7 @@ utils/subset_data_dir.sh data/train 6000 data/train_6k
 
 
 # train mono
+echo "Start monophone training" 
 
 steps/train_mono.sh --boost-silence 1.25 --nj $nj --cmd "$train_cmd" \
     data/train_6k data/lang_nosp exp/mono0a
@@ -71,14 +72,17 @@ fi
 # data/train_2kshort/stm does not exist: using local/score_basic.sh
 
 # train tri1
-
+echo "Aign monophones" 
 steps/align_si.sh --boost-silence 1.25 --nj $nj --cmd "$train_cmd" \
     data/train_6k data/lang_nosp exp/mono0a exp/mono0a_ali
+
+echo "Start training delta based triphones"
 
 steps/train_deltas.sh --boost-silence 1.25 --cmd "$train_cmd" \
     2000 10000 data/train data/lang_nosp  exp/mono0a_ali exp/tri1
 
 if $decode; then
+    echo "Decoding"
     utils/mkgraph.sh data/lang_nosp exp/tri1 exp/tri1/graph_nosp
 
     steps/decode.sh --nj $nj --cmd "$decode_cmd" exp/tri1/graph_nosp \
@@ -88,14 +92,17 @@ if $decode; then
 fi
 
 # train tri2a
+echo "Aligning delta based triphones"
 
 steps/align_si.sh --nj $nj --cmd "$train_cmd" \
     --use-graphs true data/train data/lang_nosp exp/tri1 exp/tri1_ali
+echo "Train delta+delta based triphones"
 
 steps/train_deltas.sh --cmd "$train_cmd" \
     2500 15000 data/train data/lang_nosp exp/tri1_ali exp/tri2a 
 
 if $decode; then
+    echo "Decoding"
     utils/mkgraph.sh data/lang_nosp exp/tri2a exp/tri2a/graph_nosp 
 
     steps/decode.sh --nj $nj --cmd "$decode_cmd" exp/tri2a/graph_nosp \
@@ -103,10 +110,12 @@ if $decode; then
 fi
 
 # train tri3a 
+echo "Align delta+delta based triphones"
 
 steps/align_si.sh --nj $nj --cmd "$train_cmd" \
     data/train data/lang_nosp exp/tri2a exp/tri2a_ali
 
+echo "Train LDA-MLLT triphones"
 steps/train_lda_mllt.sh --cmd "$train_cmd" \
     --splice-opts "--left-context=3 --right-context=3" \
     3500 20000 data/train data/lang_nosp exp/tri2a_ali exp/tri3a
@@ -115,6 +124,7 @@ steps/train_lda_mllt.sh --cmd "$train_cmd" \
 # steps/train_lda_mllt.sh: Done training system with LDA+MLLT features in exp/tri2b
 
 if $decode; then
+    echo "Decoding"
     utils/mkgraph.sh data/lang_nosp exp/tri3a exp/tri3a/graph_nosp
 
     steps/decode.sh --nj $nj --cmd "$decode_cmd" exp/tri3a/graph_nosp \
@@ -123,14 +133,17 @@ if $decode; then
 fi
 
 # train tri4a
+echo "Align LDA-MLLT triphones" #better with align_fmllr.sh?
 
 steps/align_si.sh --nj $nj --cmd "$train_cmd" \
     data/train data/lang_nosp exp/tri3a exp/tri3a_ali
 
+echo "Train SAT triphones" 
 steps/train_sat.sh --cmd "$train_cmd" 4200 40000 \
     data/train data/lang_nosp exp/tri3a_ali exp/tri4a
 
 if $decode; then
+    echo "Decoding"
     utils/mkgraph.sh data/lang_nosp exp/tri4a exp/tri4a/graph_nosp
 
     steps/decode.sh --nj $nj --cmd "$decode_cmd" exp/tri4a/graph_nosp \
@@ -140,6 +153,7 @@ fi
 
 # YOU ARE HERE AT THE MOMENT
 # Make final alignements for further training in a neural net
+echo "Align SAT triphones" # better with aling_fmlrr.sh ? 
 steps/align_si.sh --nj $nj --cmd "$train_cmd" \
     data/train data/lang_nosp exp/tri4a exp/tri4a_ali
 
