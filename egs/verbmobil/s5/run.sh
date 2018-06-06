@@ -26,7 +26,7 @@ echo "***** prepare_dict ***** "
 local/vm_prepare_dict.sh $vm1 $vm2
 
 # prepare language
-pos_dep_phones=true
+pos_dep_phones=false
 
 echo "***** prepare_lang ***** "
 utils/prepare_lang.sh --position-dependent-phones $pos_dep_phones \
