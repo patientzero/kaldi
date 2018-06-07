@@ -47,15 +47,19 @@ steps/compute_cmvn_stats.sh data/test
 
 # 24425 data count in trainset, split 6k utterances for monophone training
 
+
 # utils/subset_data_dir.sh --shortest data/train 2000 data/train_2kshort # https://stackoverflow.com/questions/46202653/bash-error-in-sort-sort-write-failed-standard-output-broken-pipe
+utils/subset_data_dir.sh data/train --shortest 2000 data/train_2kshort
 utils/subset_data_dir.sh data/train 6000 data/train_6k
+utils/subset_data_dir.sh data/train 12000 data/train_half
+
 
 
 # train mono
 echo "***** Start monophone training ***** " 
 
 steps/train_mono.sh --boost-silence 1.25 --nj $nj --cmd "$train_cmd" \
-    data/train data/lang_nosp exp/mono0a
+    data/train_2kshort data/lang_nosp exp/mono0a
 
 if $decode; then
     utils/mkgraph.sh data/lang_nosp exp/mono0a exp/mono0a/graph_nosp
@@ -74,12 +78,12 @@ fi
 # train tri1
 echo "***** Aign monophones ***** " 
 steps/align_si.sh --boost-silence 1.25 --nj $nj --cmd "$train_cmd" \
-    data/train data/lang_nosp exp/mono0a exp/mono0a_ali
+    data/train_2kshort data/lang_nosp exp/mono0a exp/mono0a_ali
 
 echo "***** Start training delta based triphones ***** "
 
 steps/train_deltas.sh --boost-silence 1.25 --cmd "$train_cmd" \
-    2000 10000 data/train data/lang_nosp  exp/mono0a_ali exp/tri1
+    2000 10000 data/train_6k data/lang_nosp  exp/mono0a_ali exp/tri1
 
 if $decode; then
     echo "***** Decoding ***** "
@@ -95,11 +99,11 @@ fi
 echo "***** Aligning delta based triphones ***** "
 
 steps/align_si.sh --nj $nj --cmd "$train_cmd" \
-    --use-graphs true data/train data/lang_nosp exp/tri1 exp/tri1_ali
+    --use-graphs true data/train_6k data/lang_nosp exp/tri1 exp/tri1_ali
 echo "***** Train delta+delta based triphones ***** "
 
 steps/train_deltas.sh --cmd "$train_cmd" \
-    2500 15000 data/train data/lang_nosp exp/tri1_ali exp/tri2a 
+    2500 15000 data/train_6k data/lang_nosp exp/tri1_ali exp/tri2a 
 
 if $decode; then
     echo "***** Decoding ***** "
@@ -113,12 +117,12 @@ fi
 echo "***** Align delta+delta based triphones ***** "
 
 steps/align_si.sh --nj $nj --cmd "$train_cmd" \
-    data/train data/lang_nosp exp/tri2a exp/tri2a_ali
+    data/train_6k data/lang_nosp exp/tri2a exp/tri2a_ali
 
 echo "***** Train LDA-MLLT triphones***** "
 steps/train_lda_mllt.sh --cmd "$train_cmd" \
     --splice-opts "--left-context=3 --right-context=3" \
-    3500 20000 data/train data/lang_nosp exp/tri2a_ali exp/tri3a
+    3500 20000 data/train_half data/lang_nosp exp/tri2a_ali exp/tri3a
 
 # exp/tri2b: nj=20 align prob=-49.05 over 22.61h [retry=10.8%, fail=0.8%] states=2064 gauss=15034 tree-impr=3.85 lda-sum=16.01 mllt:impr,logdet=1.14,1.65
 # steps/train_lda_mllt.sh: Done training system with LDA+MLLT features in exp/tri2b
@@ -136,7 +140,7 @@ fi
 echo "***** Align LDA-MLLT triphones ***** " #better with align_fmllr.sh?
 
 steps/align_fmllr.sh --nj $nj --cmd "$train_cmd" \
-    data/train data/lang_nosp exp/tri3a exp/tri3a_ali
+    data/train_half data/lang_nosp exp/tri3a exp/tri3a_ali
 
 echo "***** Train SAT triphones ***** " 
 steps/train_sat.sh --cmd "$train_cmd" 4200 40000 \
