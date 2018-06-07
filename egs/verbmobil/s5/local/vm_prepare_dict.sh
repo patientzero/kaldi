@@ -30,13 +30,13 @@ fi
 cat $vm2_dir/VM2_TRAIN.lex $vm1_dir/VM1_TRAIN.lex | sort | uniq > $dir/lexicon0.txt
 
 # Remove Glottal Stop from Lex
-#sed 's/Q//g' $dir/lexicon0.txt > $dir/lexicon0q.txt
+sed 's/Q//g' $dir/lexicon0.txt > $dir/lexicon0q.txt
 
 
 # Pre-processing (remove comments)
-grep -v '^#' $dir/lexicon0.txt | awk 'NF>0' | sort > $dir/lexicon1.txt || exit 1;
-# Lexicon with remove glttal stop:
-# grep -v '^#' $dir/lexicon0q.txt | awk 'NF>0' | sort > $dir/lexicon1.txt || exit 1;
+# grep -v '^#' $dir/lexicon0.txt | awk 'NF>0' | sort > $dir/lexicon1.txt || exit 1;
+# Lexicon with remove glotal stop:
+grep -v '^#' $dir/lexicon0q.txt | awk 'NF>0' | sort > $dir/lexicon1.txt || exit 1;
 
 cat $dir/lexicon1.txt | awk '{ for(n=2;n<=NF;n++){ phones[$n] = 1; }} END{for (p in phones) print p;}' | \
     grep -v sil > $dir/nonsilence_phones.txt  || exit 1;
