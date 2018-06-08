@@ -8,7 +8,7 @@ export LC_ALL=C
 set -e # exit on error
 decode=true
 
-nj=40
+nj=20
 #vm1=/export/VM1/
 #vm2=/export/VM2/
 vm1=/mnt/raid0/data/VM1
@@ -49,7 +49,7 @@ steps/compute_cmvn_stats.sh data/test
 
 
 # https://stackoverflow.com/questions/46202653/bash-error-in-sort-sort-write-failed-standard-output-broken-pipe
-utils/subset_data_dir.sh --shortest data/train 2000 data/train_2kshort
+utils/subset_data_dir.sh data/train 2000 data/train_2kshort
 utils/subset_data_dir.sh data/train 6000 data/train_6k
 utils/subset_data_dir.sh data/train 12000 data/train_half
 
@@ -76,7 +76,7 @@ fi
 # data/train_2kshort/stm does not exist: using local/score_basic.sh
 
 # train tri1
-echo "***** Aign monophones ***** " 
+echo "***** Align monophones ***** "
 steps/align_si.sh --boost-silence 1.25 --nj $nj --cmd "$train_cmd" \
     data/train_2kshort data/lang_nosp exp/mono0a exp/mono0a_ali
 
