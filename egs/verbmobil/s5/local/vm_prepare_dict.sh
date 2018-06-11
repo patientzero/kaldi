@@ -33,8 +33,7 @@ cat $vm2_dir/VM2_TRAIN.lex $vm2_dir/VM2_TEST.lex $vm1_dir/VM1_TRAIN.lex $vm1_dir
 sed 's/Q//g' $dir/lexicon0.txt > $dir/lexicon0q.txt
 # Remove ' from words that start with an umlaut e.g. '"Ubersicht' > "Ubersicht
 # 173 lines, one inword occurence on Heilig'-Drei-K"onige
-sed "s/'//g/" $dir/lexicon0q.txt > $dir/lexicon0qu.txt
-
+sed "s/'//g" $dir/lexicon0q.txt > $dir/lexicon0qu.txt
 
 # Pre-processing (remove comments)
 grep -v '^#' $dir/lexicon0qu.txt | awk 'NF>0' | sort > $dir/lexicon1.txt || exit 1;
