@@ -51,12 +51,10 @@ cat $cleantext | awk '{for(n=2;n<=NF;n++) print $n; }' | sort | uniq -c | \
 # Get counts from acoustic training transcripts, and add  one-count
 # for each word in the lexicon (but not silence, we don't want it
 # in the LM-- we'll add it optionally later).
-# Also remove "
 
 cat $cleantext | awk '{for(n=2;n<=NF;n++) print $n; }' | \
-  cat - <(grep -w -v '!sil' $lexicon | awk '{print $1}') | \
+  cat - <(grep -w -v -e '<"ahm>' -e '<"ah>' -e '<hm>' -e '<%>' -e '<h"as>' -e '!sil' $lexicon | awk '{print $1}') | \
   sort | uniq -c | sort -nr > $dir/unigram.counts || exit 1;
-
 cat $dir/unigram.counts  | awk '{print $2}' | get_word_map.pl "<s>" "</s>" "<unk>" > $dir/word_map \
    || exit 1;
 
