@@ -42,8 +42,8 @@ function filter_text {
   perl -e 'foreach $w (@ARGV) { $bad{$w} = 1; }
    while(<STDIN>) { @A  = split(" ", $_); $id = shift @A; print "$id ";
      foreach $a (@A) { if (!defined $bad{$a}) { print "$a "; }} print "\n"; }' \
-   '[NOISE]' '[LAUGHTER]' '[VOCALIZED-NOISE]' '<UNK>' '%HESITATION'
-}
+   '[noise]' '[laughter]' '[vocalized-noise]' '<unk>' '%HESITATION' '<"ahm>' '<"ah>' 
+} # aus dem testtext raus(text.filt)
 
 $cmd LMWT=$min_lmwt:$max_lmwt $dir/scoring/log/best_path.LMWT.log \
   lattice-best-path --lm-scale=LMWT --word-symbol-table=$lang/words.txt \
