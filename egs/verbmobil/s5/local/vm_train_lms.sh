@@ -10,7 +10,7 @@
 # data/local/dict/lexicon.txt
 
 text=data/train/text
-lexicon=data/local/dict_nosp/lexicon.txt
+lexicon=data/local/dict_nosp/lexicontrain.txt
 
 for f in "$text" "$lexicon"; do
   [ ! -f $x ] && echo "$0: No such file $f" && exit 1;
@@ -37,10 +37,12 @@ export PATH=$PATH:`pwd`/../../../tools/kaldi_lm
  fi
 ) || exit 1;
 
-cleantext=$dir/text.no_oov
+# preprocessing, welche hesitation gibt es
+# hier mapping, umgekehrt in lexikon aussrpachealternativen aehm, aehs etc. 
+cleantext=$dir/text.no_oov 
 
 cat $text | awk -v lex=$lexicon 'BEGIN{while((getline<lex) >0){ seen[$1]=1; } } 
-  {for(n=2; n<=NF;n++) {  if (seen[$n]) { printf("%s ", $n); } else {printf("<UNK> ");} } printf("\n");}' \
+  {for(n=2; n<=NF;n++) {  if (seen[$n]) { printf("%s ", $n); } else {printf("<unk> ");} } printf("\n");}' \
   > $cleantext || exit 1;
 
 
@@ -49,14 +51,13 @@ cat $cleantext | awk '{for(n=2;n<=NF;n++) print $n; }' | sort | uniq -c | \
 # Get counts from acoustic training transcripts, and add  one-count
 # for each word in the lexicon (but not silence, we don't want it
 # in the LM-- we'll add it optionally later).
-# Fix silence from !SIL to !sil to fit the data
+# Also remove "
 
 cat $cleantext | awk '{for(n=2;n<=NF;n++) print $n; }' | \
   cat - <(grep -w -v '!sil' $lexicon | awk '{print $1}') | \
   sort | uniq -c | sort -nr > $dir/unigram.counts || exit 1;
 
-# note: we probably won't really make use of <UNK> as there aren't any OOVs
-cat $dir/unigram.counts  | awk '{print $2}' | get_word_map.pl "<s>" "</s>" "<UNK>" > $dir/word_map \
+cat $dir/unigram.counts  | awk '{print $2}' | get_word_map.pl "<s>" "</s>" "<unk>" > $dir/word_map \
    || exit 1;
 
 # note: ignore 1st field of train.txt, it's the utterance-id.
@@ -71,7 +72,7 @@ train_lm.sh --arpa --lmtype 3gram-mincount $dir || exit 1;
 
 # note: output is
 # data/local/lm/3gram-mincount/lm_unpruned.gz 
-exit 0
+# exit 0
 
 
 # From here is some commands to do a baseline with SRILM (assuming
@@ -89,7 +90,7 @@ cat $dir/word_map | awk '{print $1}' | cat - <(echo "<s>"; echo "</s>" ) > $sdir
 
 
 ngram-count -text $sdir/train -order 3 -limit-vocab -vocab $sdir/wordlist -unk \
-  -map-unk "<UNK>" -kndiscount -interpolate -lm $sdir/srilm.o3g.kn.gz
+  -map-unk "<unk>" -kndiscount -interpolate -lm $sdir/srilm.o3g.kn.gz
 ngram -lm $sdir/srilm.o3g.kn.gz -ppl $sdir/heldout 
 # 0 zeroprobs, logprob= -250954 ppl= 90.5091 ppl1= 132.482
 
