@@ -42,7 +42,7 @@ function filter_text {
   perl -e 'foreach $w (@ARGV) { $bad{$w} = 1; }
    while(<STDIN>) { @A  = split(" ", $_); $id = shift @A; print "$id ";
      foreach $a (@A) { if (!defined $bad{$a}) { print "$a "; }} print "\n"; }' \
-   '[noise]' '[laughter]' '[vocalized-noise]' '<unk>' '%HESITATION' '<"ahm>' '<"ah>' 
+   '[noise]' '[laughter]' '[vocalized-noise]' '<unk>' '%HESITATION' '<"ahm>' '<"ah>' '<hm>' '<%>' 
 } # aus dem testtext raus(text.filt)
 
 $cmd LMWT=$min_lmwt:$max_lmwt $dir/scoring/log/best_path.LMWT.log \
@@ -51,10 +51,12 @@ $cmd LMWT=$min_lmwt:$max_lmwt $dir/scoring/log/best_path.LMWT.log \
 
 for lmwt in `seq $min_lmwt $max_lmwt`; do
   utils/int2sym.pl -f 2- $lang/words.txt <$dir/scoring/$lmwt.tra | \
-   filter_text > $dir/scoring/$lmwt.txt || exit 1;
+   awk '{ for(n=2;n<=NF;n++) if(n<NF){printf $n " "}else{printf $n "\n"}}' | \
+    sed 's/<"ahm>//g;s/<"ah>//g;s/<hm>//g;s/<%>//g;s/<h"as>//g' > $dir/scoring/$lmwt.txt || exit 1;
 done
 
-filter_text <$data/text >$dir/scoring/text.filt
+cat $data/text | awk '{ for(n=2;n<=NF;n++) if(n<NF){printf $n " "}else{printf $n "\n"}}' | \
+ sed 's/<"ahm>//g;s/<"ah>//g;s/<hm>//g;s/<%>//g;s/<h"as>//g' >$dir/scoring/text.filt
 
 $cmd LMWT=$min_lmwt:$max_lmwt $dir/scoring/log/score.LMWT.log \
   compute-wer --text --mode=present \
