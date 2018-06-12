@@ -42,26 +42,22 @@ export PATH=$PATH:`pwd`/../../../tools/kaldi_lm
 cleantext=$dir/text.no_oov 
 
 # note: ignore 1st field of train.txt, it's the utterance-id.
-cat $text | awk -v lex=$lexicon 'BEGIN{while((getline<lex) >0){ seen[$1]=1; } } 
+cat $text | sed 's/<"ahm>//g;s/<"ah>//g;s/<hm>//g;s/<%>//g;s/<h"as>//g' | awk -v lex=$lexicon 'BEGIN{while((getline<lex) >0){ seen[$1]=1; } } 
   {for(n=2; n<=NF;n++) {  if (seen[$n]) { printf("%s ", $n); } else {printf("<unk> ");} } printf("\n");}' \
   > $cleantext || exit 1;
 
 
-cat $cleantext | awk '{for(n=1;n<=NF;n++) print $n; }' | \
- sort | uniq -c | sort -nr > $dir/word.counts_tmp || exit 1;
+cat $cleantext | sed 's/<"ahm>//g;s/<"ah>//g;s/<hm>//g;s/<%>//g;s/<h"as>//g' | awk '{for(n=1;n<=NF;n++) print $n; }' | \
+ sort | uniq -c | sort -nr > $dir/word.counts || exit 1;
  
- grep -w -v -e '<"ahm>' -e '<"ah>' -e '<hm>' -e '<%>' -e '<h"as>' -e '!sil' $dir/word.counts_tmp > $dir/word.counts
-
 # Get counts from acoustic training transcripts, and add  one-count
 # for each word in the lexicon (but not silence, we don't want it
 # in the LM-- we'll add it optionally later).
 
-cat $cleantext | awk '{for(n=1;n<=NF;n++) print $n; }' | \
-  cat - <(grep -w -v -e '<"ahm>' -e '<"ah>' -e '<hm>' -e '<%>' -e '<h"as>' -e '!sil' $lexicon | awk '{print $1}') | \
-  sort | uniq -c | sort -nr > $dir/unigram.counts_tmp || exit 1;
-grep -w -v -e '<"ahm>' -e '<"ah>' -e '<hm>' -e '<%>' -e '<h"as>' -e '!sil' $dir/unigram.counts_tmp > $dir/unigram.counts    
-cat $dir/unigram.counts  | awk '{print $2}' | get_word_map.pl "<s>" "</s>" "<unk>" > $dir/word_map \
-   || exit 1;
+cat $cleantext | sed 's/<"ahm>//g;s/<"ah>//g;s/<hm>//g;s/<%>//g;s/<h"as>//g' | awk '{for(n=1;n<=NF;n++) print $n; }' | \
+  cat - <(grep -w -v '!sil' $lexicon | awk '{print $1}') | \
+  sort | uniq -c | sort -nr > $dir/unigram.counts || exit 1;
+cat $dir/unigram.counts  | awk '{print $2}' | get_word_map.pl "<s>" "</s>" "<unk>" > $dir/word_map || exit 1;
 
 # still seems fishy
 cat $cleantext | sed 's/<"ahm>//g;s/<"ah>//g;s/<hm>//g;s/<%>//g;s/<h"as>//g'  |  \
