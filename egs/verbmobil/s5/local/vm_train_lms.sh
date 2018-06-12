@@ -64,7 +64,8 @@ cat $dir/unigram.counts  | awk '{print $2}' | get_word_map.pl "<s>" "</s>" "<unk
    || exit 1;
 
 # still seems fishy
-cat $cleantext | awk -v wmap=$dir/word_map 'BEGIN{while((getline<wmap)>0)map[$1]=$2;}
+cat $cleantext | sed 's/<"ahm>//g;s/<"ah>//g;s/<hm>//g;s/<%>//g;s/<h"as>//g'  |  \
+ awk -v wmap=$dir/word_map 'BEGIN{while((getline<wmap)>0)map[$1]=$2;}
   { for(n=1;n<=NF;n++) { printf map[$n]; if(n<NF){ printf " "; } else { print ""; }}}' | gzip -c >$dir/train.gz \
    || exit 1;
 
