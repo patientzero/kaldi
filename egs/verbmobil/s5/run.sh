@@ -40,9 +40,9 @@ local/vm_format_data.sh
 # create cleaned datasubsets, cause length differs extremely
 # python local/create_subset_data_dir(srcdir, targetdir, subsetsize=1000, uttminlength=4, uttmaxlength=10):
 
-python local/create_subset_data_dir data/train data/train_2kshort 2000 5 10
-python local/create_subset_data_dir data/train data/train_6k subsetsize=6000 5 50
-python local/create_subset_data_dir data/train data/train_half 12000 5 50
+python local/create_subset_datadir.py data/train data/train_2kshort 2000 5 10
+python local/create_subset_datadir.py data/train data/train_6k subsetsize=6000 5 50
+python local/create_subset_datadir.py data/train data/train_half 12000 5 50
 
 # create spk2utt for datasubdirectories
 cat data/train_2kshort/utt2spk | utils/utt2spk_to_spk2utt.pl > data/train_2kshort/spk2utt
