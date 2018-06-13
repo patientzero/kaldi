@@ -1,10 +1,12 @@
-#!/bin/python2
+#!/bin/python
 import sys
 import itertools as it
 import os
 import shutil
 def create_subset_data_dir(srcdir, targetdir, subsetsize=1000, uttminlength=5, uttmaxlength=10):
     subsetsize=int(subsetsize)
+    uttminlength=int(uttminlength) 
+    uttmaxlength=int(uttmaxlength)
     with open(srcdir+'/wav.scp','r' ) as f:
         wavscp = map_text(f)
     with open(srcdir+'/utt2spk') as f:
