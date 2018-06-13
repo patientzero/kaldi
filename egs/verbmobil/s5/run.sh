@@ -41,7 +41,7 @@ local/vm_format_data.sh
 # python local/create_subset_data_dir(srcdir, targetdir, subsetsize=1000, uttminlength=4, uttmaxlength=10):
 
 python local/create_subset_datadir.py data/train data/train_2kshort 2000 5 10
-python local/create_subset_datadir.py data/train data/train_6k subsetsize=6000 5 50
+python local/create_subset_datadir.py data/train data/train_6k 6000 5 50
 python local/create_subset_datadir.py data/train data/train_half 12000 5 50
 
 for train in data/train_2kshort data/train_6k data/train_half:
