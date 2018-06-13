@@ -8,7 +8,7 @@ export LC_ALL=C
 set -e # exit on error
 decode=true
 
-nj=20
+nj=40
 #vm1=/export/VM1/
 #vm2=/export/VM2/
 vm1=/mnt/raid0/data/VM1
@@ -36,23 +36,38 @@ utils/prepare_lang.sh --position-dependent-phones $pos_dep_phones \
 # make configurable with src directory of text and data, so it can be easily switchted between train/all/etc for splitting
 local/vm_train_lms.sh
 local/vm_format_data.sh
-# LC_ALL=c must be introduced in prepare_lang and or prepare dict, after that problems with sort, broken pipe, duplciates
+
+# create cleaned datasubsets, cause length differs extremely
+# python local/create_subset_data_dir(srcdir, targetdir, subsetsize=1000, uttminlength=4, uttmaxlength=10):
+
+python local/create_subset_data_dir data/train data/train_2kshort 2000 5 10
+python local/create_subset_data_dir data/train data/train_6k subsetsize=6000 5 50
+python local/create_subset_data_dir data/train data/train_half 12000 5 50
+
+# create spk2utt for datasubdirectories
+cat data/train_2kshort/utt2spk | utils/utt2spk_to_spk2utt.pl > data/train_2kshort/spk2utt
+cat data/train_6k/utt2spk | utils/utt2spk_to_spk2utt.pl > data/train_6k/spk2utt
+cat data/train_half/utt2spk | utils/utt2spk_to_spk2utt.pl > data/train_half/spk2utt
+
 # create MFCC features and compute cmvn for train an testdata
 steps/make_mfcc.sh --cmd "$train_cmd" --nj $nj data/train
 steps/compute_cmvn_stats.sh data/train
+steps/make_mfcc.sh --cmd "$train_cmd" --nj $nj data/train_2kshort
+steps/compute_cmvn_stats.sh data/train_2kshort
+steps/make_mfcc.sh --cmd "$train_cmd" --nj $nj data/train_6k
+steps/compute_cmvn_stats.sh data/train_6k
+steps/make_mfcc.sh --cmd "$train_cmd" --nj $nj data/train_half
+steps/compute_cmvn_stats.sh data/train_half
 steps/make_mfcc.sh --cmd "$train_cmd" --nj $nj data/test
 steps/compute_cmvn_stats.sh data/test
 
 
 
 # 24425 data count in trainset, split 6k utterances for monophone training
-
-
 # https://stackoverflow.com/questions/46202653/bash-error-in-sort-sort-write-failed-standard-output-broken-pipe
-utils/subset_data_dir.sh data/train 2000 data/train_2kshort
-utils/subset_data_dir.sh data/train 6000 data/train_6k
-utils/subset_data_dir.sh data/train 12000 data/train_half
-
+# utils/subset_data_dir.sh data/train 2000 data/train_2kshort
+# utils/subset_data_dir.sh data/train 6000 data/train_6k
+# utils/subset_data_dir.sh data/train 12000 data/train_half
 
 
 # train mono
