@@ -48,7 +48,7 @@ for train in data/train_2kshort data/train_6k data/train_half
 do
     cat $train/text0 | uniq | sort > $train/text
     cat $train/utt2spk0 | uniq | sort > $train/utt2spk
-    cat $train/wav0.scp | uniq | sort > $train/wav.scp
+    cat $train/wav.scp0 | uniq | sort > $train/wav.scp
 done
 
 # create spk2utt for datasubdirectories
