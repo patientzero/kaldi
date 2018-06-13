@@ -33,8 +33,6 @@ for f in $data/text $lang/words.txt $dir/lat.1.gz; do
   [ ! -f $f ] && echo "$0: expecting file $f to exist" && exit 1;
 done
 
-name=`basename $data`; # e.g. eval2000
-
 mkdir -p $dir/scoring/log
 
 
@@ -42,8 +40,12 @@ function filter_text {
   perl -e 'foreach $w (@ARGV) { $bad{$w} = 1; }
    while(<STDIN>) { @A  = split(" ", $_); $id = shift @A; print "$id ";
      foreach $a (@A) { if (!defined $bad{$a}) { print "$a "; }} print "\n"; }' \
-   '[noise]' '[laughter]' '[vocalized-noise]' '<unk>' '%HESITATION' '<"ahm>' '<"ah>' '<hm>' '<%>' 
-} # aus dem testtext raus(text.filt)
+   '[noise]' '[laughter]' '[vocalized-noise]' '<unk>' '%HESITATION' '<"ahm>' '<"ah>' 
+} # aus dem testtext raus(text.filt), shift is pop left
+
+function clean_text {
+  cat $1 | sed 's/<unk>//g;s/<"ahm>//g;s/<"ah>//g;s/<hm>//g;s/<%>//g;s/<h"as>//g'
+}
 
 $cmd LMWT=$min_lmwt:$max_lmwt $dir/scoring/log/best_path.LMWT.log \
   lattice-best-path --lm-scale=LMWT --word-symbol-table=$lang/words.txt \
@@ -51,11 +53,10 @@ $cmd LMWT=$min_lmwt:$max_lmwt $dir/scoring/log/best_path.LMWT.log \
 
 for lmwt in `seq $min_lmwt $max_lmwt`; do
   utils/int2sym.pl -f 2- $lang/words.txt <$dir/scoring/$lmwt.tra | \
-   sed 's/<"ahm>//g;s/<"ah>//g;s/<hm>//g;s/<%>//g;s/<h"as>//g' > $dir/scoring/$lmwt.txt || exit 1;
+   sed 's/<unk>//g;s/<"ahm>//g;s/<"ah>//g;s/<hm>//g;s/<%>//g;s/<h"as>//g' > $dir/scoring/$lmwt.txt || exit 1;
 done
 
-cat $data/text | \
- sed 's/<"ahm>//g;s/<"ah>//g;s/<hm>//g;s/<%>//g;s/<h"as>//g' >$dir/scoring/text.filt
+clean_text $data/text >$dir/scoring/text.filt
 
 $cmd LMWT=$min_lmwt:$max_lmwt $dir/scoring/log/score.LMWT.log \
   compute-wer --text --mode=present \
