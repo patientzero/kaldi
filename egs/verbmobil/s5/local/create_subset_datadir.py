@@ -27,15 +27,15 @@ def create_subset_data_dir(srcdir, targetdir, subsetsize=1000, uttminlength=5, u
     os.mkdir(targetdir)
     filteredwav={}
     filteredutt2spk={}
-    with open(targetdir+'/text', 'w') as f:
+    with open(targetdir+'/text0', 'w') as f:
         for l in target:
             f.write(l[0] + ' ' + l[1] + '\n')
             filteredwav[l[0]]=wavscp.pop(l[0])
             filteredutt2spk[l[0]]=utt2spk.pop(l[0])
-    with open(targetdir+'/wav.scp', 'w') as f:
+    with open(targetdir+'/wav.scp0', 'w') as f:
         for k, v in filteredwav.iteritems():
             f.write(k + ' ' + v + '\n')   
-    with open(targetdir+'/utt2spk', 'w') as f:
+    with open(targetdir+'/utt2spk0', 'w') as f:
         for k, v in filteredutt2spk.iteritems():
             f.write(k + ' ' + v + '\n')
             

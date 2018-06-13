@@ -44,6 +44,13 @@ python local/create_subset_datadir.py data/train data/train_2kshort 2000 5 10
 python local/create_subset_datadir.py data/train data/train_6k subsetsize=6000 5 50
 python local/create_subset_datadir.py data/train data/train_half 12000 5 50
 
+for train in data/train_2kshort data/train_6k data/train_half:
+do
+    cat $train/text0 | uniq | sort > $train/text
+    cat $train/utt2spk0 | uniq | sort > $train/utt2spk
+    cat $train/wav0.scp | uniq | sort > $train/wav.scp
+done
+
 # create spk2utt for datasubdirectories
 cat data/train_2kshort/utt2spk | utils/utt2spk_to_spk2utt.pl > data/train_2kshort/spk2utt
 cat data/train_6k/utt2spk | utils/utt2spk_to_spk2utt.pl > data/train_6k/spk2utt
