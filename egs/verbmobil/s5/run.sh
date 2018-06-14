@@ -155,7 +155,7 @@ fi
 echo "***** Align LDA-MLLT triphones ***** " #better with align_fmllr.sh?
 
 steps/align_fmllr.sh --nj $nj --cmd "$train_cmd" \
-    data/train_half data/lang_nosp exp/tri3a exp/tri3a_ali
+    data/train data/lang_nosp exp/tri3a exp/tri3a_ali
 
 echo "***** Train SAT triphones ***** " 
 steps/train_sat.sh --cmd "$train_cmd" 4200 40000 \
