@@ -48,7 +48,7 @@ for train in data/train_2kshort data/train_6k data/train_half
 do
     cat $train/text0 | uniq | sort > $train/text
     cat $train/utt2spk0 | uniq | sort > $train/utt2spk
-    cat $train/wav.scp0 | uniq | sort > $train/wav.scp
+    cat $train/wav.scp | uniq | sort > $train/wav.scp
 done
 
 # create spk2utt for datasubdirectories
@@ -100,7 +100,7 @@ fi
 # train tri1
 echo "***** Align monophones ***** "
 steps/align_si.sh --boost-silence 1.25 --nj $nj --cmd "$train_cmd" \
-    data/train_2kshort data/lang_nosp exp/mono0a exp/mono0a_ali
+    data/train_6k data/lang_nosp exp/mono0a exp/mono0a_ali
 
 echo "***** Start training delta based triphones ***** "
 
@@ -139,7 +139,7 @@ fi
 echo "***** Align delta+delta based triphones ***** "
 
 steps/align_si.sh --nj $nj --cmd "$train_cmd" \
-    data/train_6k data/lang_nosp exp/tri2a exp/tri2a_ali
+    data/train_half data/lang_nosp exp/tri2a exp/tri2a_ali
 
 echo "***** Train LDA-MLLT triphones***** "
 steps/train_lda_mllt.sh --cmd "$train_cmd" \
@@ -162,7 +162,7 @@ fi
 echo "***** Align LDA-MLLT triphones ***** " #better with align_fmllr.sh?
 
 steps/align_fmllr.sh --nj $nj --cmd "$train_cmd" \
-    data/train_half data/lang_nosp exp/tri3a exp/tri3a_ali
+    data/train data/lang_nosp exp/tri3a exp/tri3a_ali
 
 echo "***** Train SAT triphones ***** " 
 steps/train_sat.sh --cmd "$train_cmd" 4200 40000 \
