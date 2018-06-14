@@ -48,23 +48,16 @@ for train in data/train_2kshort data/train_6k data/train_half
 do
     cat $train/text0 | uniq | sort > $train/text
     cat $train/utt2spk0 | uniq | sort > $train/utt2spk
-    cat $train/wav.scp | uniq | sort > $train/wav.scp
+    cat $train/wav.scp0 | uniq | sort > $train/wav.scp
+    # create spk2utt for datasubdirectories
+    cat $train/utt2spk | utils/utt2spk_to_spk2utt.pl > $train/spk2utt
+    steps/make_mfcc.sh --cmd "$train_cmd" --nj $nj $train
+    steps/compute_cmvn_stats.sh $train
 done
-
-# create spk2utt for datasubdirectories
-cat data/train_2kshort/utt2spk | utils/utt2spk_to_spk2utt.pl > data/train_2kshort/spk2utt
-cat data/train_6k/utt2spk | utils/utt2spk_to_spk2utt.pl > data/train_6k/spk2utt
-cat data/train_half/utt2spk | utils/utt2spk_to_spk2utt.pl > data/train_half/spk2utt
 
 # create MFCC features and compute cmvn for train an testdata
 steps/make_mfcc.sh --cmd "$train_cmd" --nj $nj data/train
 steps/compute_cmvn_stats.sh data/train
-steps/make_mfcc.sh --cmd "$train_cmd" --nj $nj data/train_2kshort
-steps/compute_cmvn_stats.sh data/train_2kshort
-steps/make_mfcc.sh --cmd "$train_cmd" --nj $nj data/train_6k
-steps/compute_cmvn_stats.sh data/train_6k
-steps/make_mfcc.sh --cmd "$train_cmd" --nj $nj data/train_half
-steps/compute_cmvn_stats.sh data/train_half
 steps/make_mfcc.sh --cmd "$train_cmd" --nj $nj data/test
 steps/compute_cmvn_stats.sh data/test
 
@@ -162,7 +155,7 @@ fi
 echo "***** Align LDA-MLLT triphones ***** " #better with align_fmllr.sh?
 
 steps/align_fmllr.sh --nj $nj --cmd "$train_cmd" \
-    data/train data/lang_nosp exp/tri3a exp/tri3a_ali
+    data/train_half data/lang_nosp exp/tri3a exp/tri3a_ali
 
 echo "***** Train SAT triphones ***** " 
 steps/train_sat.sh --cmd "$train_cmd" 4200 40000 \
