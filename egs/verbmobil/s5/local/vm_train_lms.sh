@@ -10,7 +10,7 @@
 # data/local/dict/lexicon.txt
 
 text=data/train/text
-lexicon=data/local/dict_nosp/lexicontrain.txt
+lexicon=data/local/dict_nosp/lexicon.txt
 
 for f in "$text" "$lexicon"; do
   [ ! -f $x ] && echo "$0: No such file $f" && exit 1;
@@ -42,25 +42,25 @@ export PATH=$PATH:`pwd`/../../../tools/kaldi_lm
 cleantext=$dir/text.no_oov 
 
 # note: ignore 1st field of train.txt, it's the utterance-id.
-cat $text | sed 's/<"ahm>//g;s/<"ah>//g;s/<hm>//g;s/<%>//g;s/<h"as>//g' | awk -v lex=$lexicon 'BEGIN{while((getline<lex) >0){ seen[$1]=1; } } 
+cat $text | awk -v lex=$lexicon 'BEGIN{while((getline<lex) >0){ seen[$1]=1; } } 
   {for(n=2; n<=NF;n++) {  if (seen[$n]) { printf("%s ", $n); } else {printf("<unk> ");} } printf("\n");}' \
   > $cleantext || exit 1;
 
 
-cat $cleantext | sed 's/<"ahm>//g;s/<"ah>//g;s/<hm>//g;s/<%>//g;s/<h"as>//g' | awk '{for(n=1;n<=NF;n++) print $n; }' | \
+cat $cleantext | awk '{for(n=1;n<=NF;n++) print $n; }' | \
  sort | uniq -c | sort -nr > $dir/word.counts || exit 1;
  
 # Get counts from acoustic training transcripts, and add  one-count
 # for each word in the lexicon (but not silence, we don't want it
 # in the LM-- we'll add it optionally later).
 
-cat $cleantext | sed 's/<"ahm>//g;s/<"ah>//g;s/<hm>//g;s/<%>//g;s/<h"as>//g' | awk '{for(n=1;n<=NF;n++) print $n; }' | \
+cat $cleantext | awk '{for(n=1;n<=NF;n++) print $n; }' | \
   cat - <(grep -w -v '!sil' $lexicon | awk '{print $1}') | \
   sort | uniq -c | sort -nr > $dir/unigram.counts || exit 1;
 cat $dir/unigram.counts  | awk '{print $2}' | get_word_map.pl "<s>" "</s>" "<unk>" > $dir/word_map || exit 1;
 
 # still seems fishy
-cat $cleantext | sed 's/<"ahm>//g;s/<"ah>//g;s/<hm>//g;s/<%>//g;s/<h"as>//g'  |  \
+cat $cleantext |  \
  awk -v wmap=$dir/word_map 'BEGIN{while((getline<wmap)>0)map[$1]=$2;}
   { for(n=1;n<=NF;n++) { printf map[$n]; if(n<NF){ printf " "; } else { print ""; }}}' | gzip -c >$dir/train.gz \
    || exit 1;

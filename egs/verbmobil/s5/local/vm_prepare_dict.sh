@@ -27,10 +27,10 @@ if [ ! -d $vm1_dir ] || [ ! -d $vm2_dir ]; then
 fi
 
 # Create lexikon for VM1 and VM2 train data, also add VM1 and VM2 testdata to the lex
-cat $vm2_dir/VM2_TRAIN.lex $vm2_dir/VM2_TEST.lex $vm1_dir/VM1_TRAIN.lex $vm1_dir/VM1_TEST.lex | sort | uniq > $dir/lexicon0.txt
+cat $vm2_dir/VM2_TRAIN.lex $vm2_dir/VM2_TEST.lex $vm1_dir/VM1_TRAIN.lex $vm1_dir/VM1_TEST.lex | sort | uniq > $dir/lexicontrain0.txt
 
 # Create lexikon for VM1 and VM2 train data
-cat $vm2_dir/VM2_TRAIN.lex $vm1_dir/VM1_TRAIN.lex | sort | uniq > $dir/lexicontrain0.txt
+cat $vm2_dir/VM2_TRAIN.lex $vm1_dir/VM1_TRAIN.lex | sort | uniq > $dir/lexicon0.txt
 
 # Remove Glottal Stop from Lex
 # Remove ' from words that start with an umlaut e.g. '"Ubersicht' > "Ubersicht
@@ -46,22 +46,17 @@ grep -v '^#' $dir/lexicontrain0q.txt | awk 'NF>0' | sort > $dir/lexicontrain1.tx
 cat $dir/lexicon1.txt | awk '{ for(n=2;n<=NF;n++){ phones[$n] = 1; }} END{for (p in phones) print p;}' | \
     grep -v sil > $dir/nonsilence_phones.txt  || exit 1;
 
-# remove <"ahm> <"ah> <hm>
-grep -v -e '<hm>' -e '<"ah' $dir/lexicon1.txt > $dir/lexicon1.1.txt
-grep -v -e '<hm>' -e '<"ah' $dir/lexicontrain1.txt > $dir/lexicontrain1.1.txt
-
 ( echo sil; echo spn; echo nsn; echo lau ) > $dir/silence_phones.txt # silence, spoken noice, non spoken noise, laughter
 
 echo sil > $dir/optional_silence.txt
 
-# add <"ahm> <"ah> <hm> mapped to _usb
 # Add to the lexion the silences, noises etc.
 ( echo '!sil sil'; echo '[vocalized-noise] spn'; echo '[noise] nsn'; \
-    echo '[laughter] lau'; echo '<unk> spn'; echo '<"ah> _usb'; echo '<"ahm> _usb'; echo '<hm> _usb') \
+    echo '[laughter] lau'; echo '<unk> spn'; echo '<h"as> E: m'; echo '<h"as> E:'; echo '<h"as> m') 
     | cat - $dir/lexicon1.1.txt  > $dir/lexicon2.txt || exit 1;
 
 ( echo '!sil sil'; echo '[vocalized-noise] spn'; echo '[noise] nsn'; \
-    echo '[laughter] lau'; echo '<unk> spn'; echo '<"ah> _usb'; echo '<"ahm> _usb'; echo '<hm> _usb') \
+    echo '[laughter] lau'; echo '<unk> spn';) \
     | cat - $dir/lexicontrain1.1.txt  > $dir/lexicontrain2.txt || exit 1;
 
 # No "extra questions" in the input to this setup, as we don't
