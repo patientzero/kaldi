@@ -44,7 +44,7 @@ cleantext=$dir/text.no_oov
 # note: ignore 1st field of train.txt, it's the utterance-id.
 cat $text | awk -v lex=$lexicon 'BEGIN{while((getline<lex) >0){ seen[$1]=1; } } 
   {for(n=2; n<=NF;n++) {  if (seen[$n]) { printf("%s ", $n); } else {printf("<unk> ");} } printf("\n");}' \
-  > $cleantext || exit 1;
+  | sed 's/<"ahm>/<h"as>/g;s/<"ah>/<h"as>/g;s/<hm>/<h"as>/g' > $cleantext || exit 1;
 
 
 cat $cleantext | awk '{for(n=1;n<=NF;n++) print $n; }' | \
@@ -59,7 +59,6 @@ cat $cleantext | awk '{for(n=1;n<=NF;n++) print $n; }' | \
   sort | uniq -c | sort -nr > $dir/unigram.counts || exit 1;
 cat $dir/unigram.counts  | awk '{print $2}' | get_word_map.pl "<s>" "</s>" "<unk>" > $dir/word_map || exit 1;
 
-# still seems fishy
 cat $cleantext |  \
  awk -v wmap=$dir/word_map 'BEGIN{while((getline<wmap)>0)map[$1]=$2;}
   { for(n=1;n<=NF;n++) { printf map[$n]; if(n<NF){ printf " "; } else { print ""; }}}' | gzip -c >$dir/train.gz \
