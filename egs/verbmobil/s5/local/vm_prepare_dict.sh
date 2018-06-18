@@ -52,12 +52,12 @@ echo sil > $dir/optional_silence.txt
 
 # Add to the lexion the silences, noises etc.
 ( echo '!sil sil'; echo '[vocalized-noise] spn'; echo '[noise] nsn'; \
-    echo '[laughter] lau'; echo '<unk> spn'; echo '<h"as> E: m'; echo '<h"as> E:'; echo '<h"as> m';) 
-    | cat - $dir/lexicon1.1.txt  > $dir/lexicon2.txt || exit 1;
+    echo '[laughter] lau'; echo '<unk> spn'; echo '<h"as> E: m'; echo '<h"as> E:'; echo '<h"as> m'; ) | \
+ cat - $dir/lexicon1.txt  > $dir/lexicon2.txt || exit 1;
 
 ( echo '!sil sil'; echo '[vocalized-noise] spn'; echo '[noise] nsn'; \
     echo '[laughter] lau'; echo '<unk> spn';) \
-    | cat - $dir/lexicontrain1.1.txt  > $dir/lexicontrain2.txt || exit 1;
+    | cat - $dir/lexicontrain1.txt  > $dir/lexicontrain2.txt || exit 1;
 
 # No "extra questions" in the input to this setup, as we don't
 # have stress or tone.
