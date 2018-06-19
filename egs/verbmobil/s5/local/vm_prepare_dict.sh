@@ -26,9 +26,6 @@ if [ ! -d $vm1_dir ] || [ ! -d $vm2_dir ]; then
   exit 1; 
 fi
 
-# Create lexikon for VM1 and VM2 train data, also add VM1 and VM2 testdata to the lex
-cat $vm2_dir/VM2_TRAIN.lex $vm2_dir/VM2_TEST.lex $vm1_dir/VM1_TRAIN.lex $vm1_dir/VM1_TEST.lex | sort | uniq > $dir/lexicontrain0.txt
-
 # Create lexikon for VM1 and VM2 train data
 cat $vm2_dir/VM2_TRAIN.lex $vm1_dir/VM1_TRAIN.lex | sort | uniq > $dir/lexicon0.txt
 
@@ -36,11 +33,9 @@ cat $vm2_dir/VM2_TRAIN.lex $vm1_dir/VM1_TRAIN.lex | sort | uniq > $dir/lexicon0.
 # Remove ' from words that start with an umlaut e.g. '"Ubersicht' > "Ubersicht
 # 173 lines, one inword occurence on Heilig'-Drei-K"onige
 sed "s/Q//g;s/'//g" $dir/lexicon0.txt > $dir/lexicon0q.txt
-sed "s/Q//g;s/'//g" $dir/lexicontrain0.txt > $dir/lexicontrain0q.txt
 
-# Pre-processing (remove comments)
-grep -v '^#' $dir/lexicon0q.txt | awk 'NF>0' | sort > $dir/lexicon1.txt || exit 1;
-grep -v '^#' $dir/lexicontrain0q.txt | awk 'NF>0' | sort > $dir/lexicontrain1.txt || exit 1;
+# Pre-processing (remove comments) and remove <%> <h"as> to add later as spn
+grep -v '^#' $dir/lexicon0q.txt | awk 'NF>0' | grep -v -e '<%>' -e '<h"as>' | sort > $dir/lexicon1.txt || exit 1;
 
 # all phones are in one dataset
 cat $dir/lexicon1.txt | awk '{ for(n=2;n<=NF;n++){ phones[$n] = 1; }} END{for (p in phones) print p;}' | \
@@ -50,19 +45,14 @@ cat $dir/lexicon1.txt | awk '{ for(n=2;n<=NF;n++){ phones[$n] = 1; }} END{for (p
 
 echo sil > $dir/optional_silence.txt
 
-# Add to the lexion the silences, noises etc.
-( echo '!sil sil'; echo '[vocalized-noise] spn'; echo '[noise] nsn'; \
-    echo '[laughter] lau'; echo '<unk> spn'; echo '<h"as> E: m'; echo '<h"as> E:'; echo '<h"as> m'; ) | \
+# Add to the lexion the silences, noises etc. map aehm etc to pseudoword %hes and <%> and <h"as> as spn
+( echo '!sil sil'; echo '[vocalized-noise] spn'; echo '[noise] nsn'; echo '<%> spn'; echo '<h"as> spn' \
+    echo '[laughter] lau'; echo '<unk> spn'; echo '%hes E: m'; echo '%hes E:'; echo '%hes m'; ) | \
  cat - $dir/lexicon1.txt  > $dir/lexicon2.txt || exit 1;
-
-( echo '!sil sil'; echo '[vocalized-noise] spn'; echo '[noise] nsn'; \
-    echo '[laughter] lau'; echo '<unk> spn';) \
-    | cat - $dir/lexicontrain1.txt  > $dir/lexicontrain2.txt || exit 1;
 
 # No "extra questions" in the input to this setup, as we don't
 # have stress or tone.
 echo -n >$dir/extra_questions.txt
 
 cp $dir/lexicon2.txt $dir/lexicon.txt #Final lexicon
-cp $dir/lexicontrain2.txt $dir/lexicontrain.txt
 echo "Prepared dictionary and phone-sets for Verbmobil"
