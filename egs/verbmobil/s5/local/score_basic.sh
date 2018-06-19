@@ -40,11 +40,11 @@ function filter_text {
   perl -e 'foreach $w (@ARGV) { $bad{$w} = 1; }
    while(<STDIN>) { @A  = split(" ", $_); $id = shift @A; print "$id ";
      foreach $a (@A) { if (!defined $bad{$a}) { print "$a "; }} print "\n"; }' \
-   '[noise]' '[laughter]' '[vocalized-noise]' '<unk>' '%HESITATION' '<"ahm>' '<"ah>' 
+   '[noise]' '[laughter]' '[vocalized-noise]' '<unk>' '%HESITATION' '<"ahm>' '<"ah>' '<h"as>' '<%>' 
 } # aus dem testtext raus(text.filt), shift is pop left
 
 function clean_text {
-  cat $1 | sed 's/<unk>//g;s/<"ahm>//g;s/<"ah>//g;s/<hm>//g;s/<%>//g;s/<h"as>//g'
+  cat $1 | sed 's/<unk>//g;s/<"ahm>/<h"as>/g;s/<"ah>/<h"as>/g;s/<hm>/<h"as>/g;s/<%>/<h"as>/g;s/<h"as>/<h"as>/g'
 }
 
 $cmd LMWT=$min_lmwt:$max_lmwt $dir/scoring/log/best_path.LMWT.log \
@@ -53,7 +53,7 @@ $cmd LMWT=$min_lmwt:$max_lmwt $dir/scoring/log/best_path.LMWT.log \
 
 for lmwt in `seq $min_lmwt $max_lmwt`; do
   utils/int2sym.pl -f 2- $lang/words.txt <$dir/scoring/$lmwt.tra | \
-   sed 's/<unk>//g;s/<"ahm>//g;s/<"ah>//g;s/<hm>//g;s/<%>//g;s/<h"as>//g' > $dir/scoring/$lmwt.txt || exit 1;
+   sed 's/<unk>//g;s/<"ahm>/<h"as>/g;s/<"ah>/<h"as>/g;s/<hm>/<h"as>/g;s/<%>/<h"as>/g;s/<h"as>/<h"as>/g' > $dir/scoring/$lmwt.txt || exit 1;
 done
 
 clean_text $data/text >$dir/scoring/text.filt
