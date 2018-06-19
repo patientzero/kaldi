@@ -44,7 +44,7 @@ cleantext=$dir/text.no_oov
 # note: ignore 1st field of train.txt, it's the utterance-id.
 cat $text | awk -v lex=$lexicon 'BEGIN{while((getline<lex) >0){ seen[$1]=1; } } 
   {for(n=2; n<=NF;n++) {  if (seen[$n]) { printf("%s ", $n); } else {printf("<unk> ");} } printf("\n");}' \
-  | sed 's/<"ahm>/<h"as>/g;s/<"ah>/<h"as>/g;s/<hm>/<h"as>/g' > $cleantext || exit 1;
+  | sed 's/<"ahm>/<h"as>/g;s/<"ah>/<h"as>/g;s/<hm>/<h"as>/g;s/<%>/<h"as>/g' > $cleantext || exit 1;
 
 
 cat $cleantext | awk '{for(n=1;n<=NF;n++) print $n; }' | \
