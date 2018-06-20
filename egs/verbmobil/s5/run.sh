@@ -134,7 +134,7 @@ echo "***** Align delta+delta based triphones ***** "
 steps/align_si.sh --nj $nj --cmd "$train_cmd" \
     data/train_half data/lang_nosp exp/tri2a exp/tri2a_ali
 
-echo "***** Train LDA-MLLT triphones***** "
+echo "***** Train LDA-MLLT triphones ***** "
 steps/train_lda_mllt.sh --cmd "$train_cmd" \
     --splice-opts "--left-context=3 --right-context=3" \
     3500 20000 data/train_half data/lang_nosp exp/tri2a_ali exp/tri3a
@@ -154,7 +154,7 @@ fi
 # train tri4a
 echo "***** Align LDA-MLLT triphones ***** " #better with align_fmllr.sh?
 
-steps/align_fmllr.sh --nj $nj --cmd "$train_cmd" \
+steps/align_si.sh --nj $nj --cmd "$train_cmd" \
     data/train data/lang_nosp exp/tri3a exp/tri3a_ali
 
 echo "***** Train SAT triphones ***** " 
@@ -165,8 +165,9 @@ if $decode; then
     echo "***** Decoding ***** "
     utils/mkgraph.sh data/lang_nosp exp/tri4a exp/tri4a/graph_nosp
 
-    steps/decode.sh --nj $nj --cmd "$decode_cmd" exp/tri4a/graph_nosp \
-	data/test exp/tri4a/decode_nosp_test
+    steps/decode_fmllr.sh --nj $nj --cmd "$decode_cmd" \
+        --acwt 0.125 \
+        exp/tri4a/graph_nosp data/test exp/tri4a/decode_nosp_test
 
 fi
 
