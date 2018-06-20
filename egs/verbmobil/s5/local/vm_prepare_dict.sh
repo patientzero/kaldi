@@ -46,7 +46,7 @@ cat $dir/lexicon1.txt | awk '{ for(n=2;n<=NF;n++){ phones[$n] = 1; }} END{for (p
 echo sil > $dir/optional_silence.txt
 
 # Add to the lexion the silences, noises etc. map aehm etc to pseudoword %hes and <%> and <h"as> as spn
-( echo '!sil sil'; echo '[vocalized-noise] spn'; echo '[noise] nsn'; echo '<%> spn'; echo '<h"as> spn' \
+( echo '!sil sil'; echo '[vocalized-noise] spn'; echo '[noise] nsn'; echo '<%> spn'; echo '<h"as> spn'; \
     echo '[laughter] lau'; echo '<unk> spn'; echo '%hes E: m'; echo '%hes E:'; echo '%hes m'; ) | \
  cat - $dir/lexicon1.txt  > $dir/lexicon2.txt || exit 1;
 
