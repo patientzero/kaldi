@@ -4,7 +4,7 @@
 # begin configuration section.
 cmd=run.pl
 min_lmwt=6
-max_lmwt=12
+max_lmwt=19
 #end configuration section.
 
 [ -f ./path.sh ] && . ./path.sh
@@ -20,7 +20,7 @@ if [ $# -ne 3 ]; then
 fi
 
 function clean_text {
-  cat $1 | sed 's/%hes//g;s/<h"as>//g;s/<%>//g;s/<unk>//g;' | sed 's/<a"hm>//g;s/<a"h>//g;s<hm>//g' | sed -e 's/  */\ /g'
+  cat $1 | sed 's/%hes//g;s/<h"as>//g;s/<%>//g;s/<unk>//g' | sed -e 's/<"ahm>//g;s/<"ah>//g;s/<hm>//g' | sed -e 's/  */\ /g'
 }
 
 data=$1
