@@ -166,7 +166,7 @@ if $decode; then
     utils/mkgraph.sh data/lang_nosp exp/tri4a exp/tri4a/graph_nosp
 
     steps/decode_fmllr.sh --nj $nj --cmd "$decode_cmd" \
-        --acwt 0.125 \
+        --acwt 0.067 \
         exp/tri4a/graph_nosp data/test exp/tri4a/decode_nosp_test
 
 fi
