@@ -39,10 +39,10 @@ for f in $data/text $lang/words.txt $dir/lat.1.gz; do
 done
 
 # transform data to fit expected format(trn) and clean from %hes
-if [ ! -f $dir/scoring/text_trn ]; then 
+if [ ! -f $data/text_trn ]; then
   echo "create ref file"
-  awk '{for(n=2;n<=NF;n++) if(n<NF){printf $n " "}else {printf "(" $1 ")\n" }}' $data/text | \
-  clean_text > $data/text_trn 
+  awk '{for(n=2;n<=NF;n++) if(n<NF){printf $n " "}else {print "(" $1 ")" }}' $data/text | \
+  clean_text > $data/text_trn
 fi
 
 mkdir -p $dir/scoring/log
@@ -54,22 +54,22 @@ $cmd LMWT=$min_lmwt:$max_lmwt $dir/scoring/log/best_path.LMWT.log \
 
 for lmwt in `seq $min_lmwt $max_lmwt`; do
   utils/int2sym.pl -f 2- $lang/words.txt <$dir/scoring/$lmwt.tra | \
-  > $dir/scoring/$lmwt.txt || exit 1;
+  cat - > $dir/scoring/$lmwt.txt || exit 1;
 done
 
 
 # remove hes from hyp ref
 for lmwt in `seq $min_lmwt $max_lmwt`; do
 #find utterances that are empty after cleaning
-  clean_text $dir/scoring/$lmwt.txt | awk '{if(NF == 1){printf $1 "]\n"}}' > $dir/scoring/empty
+  clean_text $dir/scoring/$lmwt.txt | awk '{if(NF == 1){print $1}}' > $dir/scoring/empty
 #remove empty utterances and reformat hypothesis files to trn format
   utils/filter_scp.pl --exclude $dir/scoring/empty $dir/scoring/$lmwt.txt | \
-    awk '{for(n=2;n<=NF;n++) if(n<NF){printf $n " "}else {printf "(" $1 ")\n" }}' \
+    clean_text | awk '{for(n=2;n<=NF;n++) if(n<NF){printf $n " "}else {print "(" $1 ")" }}' \
     > $dir/scoring/$lmwt.trn
 done
 
 # call sclite
 $cmd LMWT=$min_lmwt:$max_lmwt $dir/scoring/log/score.LMWT.log \
-  $sclite -r $data/text_trn -h $dir/scoring/$LMWT.trn -i rm -o dtl -n wer_$LMWT -O $dir/scoring || exit 1;
+  $sclite -r $data/text_trn -h $dir/scoring/LMWT.trn -i rm -o dtl -n wer_LMWT -O $dir/scoring || exit 1;
 
 exit 0
