@@ -3,8 +3,8 @@
 
 # begin configuration section.
 cmd=run.pl
-min_lmwt=5
-max_lmwt=17
+min_lmwt=6
+max_lmwt=12
 #end configuration section.
 
 [ -f ./path.sh ] && . ./path.sh
@@ -44,7 +44,8 @@ function filter_text {
 } # aus dem testtext raus(text.filt), shift is pop left
 
 function clean_text {
-  cat $1 | sed 's/<unk>//g;s/<"ahm>/<h"as>/g;s/<"ah>/<h"as>/g;s/<hm>/<h"as>/g;s/<%>/<h"as>/g;s/<h"as>/<h"as>/g' |  sed -e 's/  */\ /g'
+  cat $1 | sed 's/%hes//g' | sed -e 's/  */\ /g'
+ Stashed changes
 }
 
 $cmd LMWT=$min_lmwt:$max_lmwt $dir/scoring/log/best_path.LMWT.log \
@@ -53,7 +54,7 @@ $cmd LMWT=$min_lmwt:$max_lmwt $dir/scoring/log/best_path.LMWT.log \
 
 for lmwt in `seq $min_lmwt $max_lmwt`; do
   utils/int2sym.pl -f 2- $lang/words.txt <$dir/scoring/$lmwt.tra | \
-   sed 's/<unk>//g;s/<"ahm>/<h"as>/g;s/<"ah>/<h"as>/g;s/<hm>/<h"as>/g;s/<%>/<h"as>/g;s/<h"as>/<h"as>/g' > $dir/scoring/$lmwt.txt || exit 1;
+   cat - | clean_text > $dir/scoring/$lmwt.txt || exit 1;
 done
 
 clean_text $data/text >$dir/scoring/text.filt
