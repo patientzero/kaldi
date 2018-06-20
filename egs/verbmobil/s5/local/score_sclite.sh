@@ -20,7 +20,7 @@ if [ $# -ne 3 ]; then
 fi
 
 function clean_text {
-  cat $1 | sed 's/%hes//g' | sed -e 's/  */\ /g'
+  cat $1 | sed 's/%hes//g;s/<h"as>//g;s/<%>//g;s/<unk>//g;' | sed 's/<a"hm>//g;s/<a"h>//g;s<hm>//g' | sed -e 's/  */\ /g'
 }
 
 data=$1
