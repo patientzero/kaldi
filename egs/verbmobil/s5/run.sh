@@ -56,19 +56,15 @@ do
 done
 
 # create MFCC features and compute cmvn for train an testdata
+for datdir in data/train data/dev data/test
+do
+steps/make_mfcc.sh --cmd "$train_cmd" --nj $nj $datdir
+steps/compute_cmvn_stats.sh $datdir
+done
 steps/make_mfcc.sh --cmd "$train_cmd" --nj $nj data/train
 steps/compute_cmvn_stats.sh data/train
 steps/make_mfcc.sh --cmd "$train_cmd" --nj $nj data/test
 steps/compute_cmvn_stats.sh data/test
-
-
-
-# 24425 data count in trainset, split 6k utterances for monophone training
-# https://stackoverflow.com/questions/46202653/bash-error-in-sort-sort-write-failed-standard-output-broken-pipe
-# utils/subset_data_dir.sh data/train 2000 data/train_2kshort
-# utils/subset_data_dir.sh data/train 6000 data/train_6k
-# utils/subset_data_dir.sh data/train 12000 data/train_half
-
 
 # train mono
 echo "***** Start monophone training ***** " 
