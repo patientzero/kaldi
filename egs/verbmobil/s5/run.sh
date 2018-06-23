@@ -61,10 +61,6 @@ do
 steps/make_mfcc.sh --cmd "$train_cmd" --nj $nj $datdir
 steps/compute_cmvn_stats.sh $datdir
 done
-steps/make_mfcc.sh --cmd "$train_cmd" --nj $nj data/train
-steps/compute_cmvn_stats.sh data/train
-steps/make_mfcc.sh --cmd "$train_cmd" --nj $nj data/test
-steps/compute_cmvn_stats.sh data/test
 
 # train mono
 echo "***** Start monophone training ***** " 
