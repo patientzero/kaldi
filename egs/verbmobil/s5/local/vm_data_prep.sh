@@ -17,7 +17,7 @@ train=data/train
 test=data/test
 dev=data/dev
 
-mkdir -p $dir $train $test
+mkdir -p $dir $train $test $dev
 echo "Created $dir $train $test"
 
 # Audio data directory check
