@@ -41,6 +41,7 @@ remove_egs=true
 test_online_decoding=false  # if true, it will run the last decoding stage.
 
 # End configuration section.
+
 echo "$0 $@"  # Print the command line for logging
 
 
@@ -62,7 +63,6 @@ local/nnet3/run_ivector_common.sh \
   --train-set $train_set --gmm $gmm \
   --num-threads-ubm $num_threads_ubm \
   --nnet3-affix "$nnet3_affix"
-
 
 
 gmm_dir=exp/${gmm}
@@ -103,7 +103,7 @@ if [ $stage -le 12 ]; then
       exit 1;
     fi
   else
-    cp -r data/lang $lang
+    cp -r data/lang_nosp $lang
     silphonelist=$(cat $lang/phones/silence.csl) || exit 1;
     nonsilphonelist=$(cat $lang/phones/nonsilence.csl) || exit 1;
     # Use our special topology... note that later on may have to tune this

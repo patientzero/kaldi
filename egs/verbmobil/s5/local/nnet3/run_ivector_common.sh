@@ -28,13 +28,13 @@ nnet3_affix=             # affix for exp/nnet3 directory to put iVector stuff in
 gmm_dir=exp/${gmm}
 ali_dir=exp/${gmm}_ali_${train_set}_sp
 
+
 for f in data/${train_set}/feats.scp ${gmm_dir}/final.mdl; do
   if [ ! -f $f ]; then
     echo "$0: expected file $f to exist"
     exit 1
   fi
 done
-
 
 
 if [ $stage -le 2 ] && [ -f data/${train_set}_sp_hires/feats.scp ]; then
@@ -156,7 +156,6 @@ if [ -f data/${train_set}_sp/feats.scp ] && [ $stage -le 8 ]; then
   exit 1;
 fi
 
-
 if [ $stage -le 6 ]; then
   echo "$0: preparing directory for low-resolution speed-perturbed data (for alignment)"
   utils/data/perturb_data_dir_speed_3way.sh \
@@ -181,7 +180,7 @@ if [ $stage -le 8 ]; then
   fi
   echo "$0: aligning with the perturbed low-resolution data"
   steps/align_fmllr.sh --nj $nj --cmd "$train_cmd" \
-    data/${train_set}_sp data/lang $gmm_dir $ali_dir
+    data/${train_set}_sp data/lang_nosp $gmm_dir $ali_dir
 fi
 
 
