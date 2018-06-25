@@ -95,7 +95,7 @@ if [ $stage -le 12 ]; then
   # topo file. [note, it really has two states.. the first one is only repeated
   # once, the second one has zero or more repeats.]
   if [ -d $lang ]; then
-    if [ $lang/L.fst -nt data/lang/L.fst ]; then
+    if [ $lang/L.fst -nt data/lang_nosp/L.fst ]; then
       echo "$0: $lang already exists, not overwriting it; continuing"
     else
       echo "$0: $lang already exists and seems to be older than data/lang..."
