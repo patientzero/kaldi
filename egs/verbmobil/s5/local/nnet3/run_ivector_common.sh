@@ -11,7 +11,8 @@ set -e -o pipefail
 stage=0
 nj=40
 train_set=train   # you might set this to e.g. train.
-test_sets="test dev"
+# test_sets="test dev"
+test_sets="test"
 gmm=tri4a                # This specifies a GMM-dir from the features of the type you're training the system on;
                          # it should contain alignments for 'train_set'.
 
@@ -25,7 +26,7 @@ nnet3_affix=             # affix for exp/nnet3 directory to put iVector stuff in
 
 
 gmm_dir=exp/${gmm}
-ali_dir=exp/${gmm}_ali_${train_set}_sp
+ali_dir=exp/${gmm}_ali
 
 for f in data/${train_set}/feats.scp ${gmm_dir}/final.mdl; do
   if [ ! -f $f ]; then

@@ -4,26 +4,6 @@
 # end, and no chain l2-regularize
 #[note: was 1e12e.]
 
-# local/chain/compare_wer.sh exp/chain/tdnn1e_sp exp/chain/tdnn1f_sp
-# System                tdnn1e10_sp tdnn1e12e_sp
-#WER dev93 (tgpr)                7.29      7.20
-#WER dev93 (tg)                  7.08      6.81
-#WER dev93 (big-dict,tgpr)       5.15      5.04
-#WER dev93 (big-dict,fg)         4.52      4.42
-#WER eval92 (tgpr)               5.12      4.80
-#WER eval92 (tg)                 4.91      4.54
-#WER eval92 (big-dict,tgpr)      2.94      2.76
-#WER eval92 (big-dict,fg)        2.57      2.30
-# Final train prob        -0.0545   -0.0455
-# Final valid prob        -0.0650   -0.0599
-# Final train prob (xent)   -0.9696   -0.9060
-# Final valid prob (xent)   -0.9917   -0.9448
-# Num-params                 8067660   6071244
-
-
-# exp/chain/tdnn1e_sp: num-iters=72 nj=2..8 num-params=8.1M dim=40+100->2854 combine=-0.064->-0.063 (over 3) xent:train/valid[47,71,final]=(-1.07,-0.973,-0.970/-1.08,-0.992,-0.992) logprob:train/valid[47,71,final]=(-0.064,-0.056,-0.054/-0.072,-0.066,-0.065)
-# exp/chain/tdnn1f_sp: num-iters=72 nj=2..8 num-params=6.1M dim=40+100->2854 combine=-0.061->-0.061 (over 2) xent:train/valid[47,71,final]=(-1.04,-0.911,-0.910/-1.06,-0.953,-0.952) logprob:train/valid[47,71,final]=(-0.063,-0.052,-0.051/-0.071,-0.064,-0.064)
-
 set -e -o pipefail
 
 # First the options that are passed through to run_ivector_common.sh
@@ -31,7 +11,8 @@ set -e -o pipefail
 stage=0
 nj=40
 train_set=train
-test_sets="test dev"
+# test_sets="test dev"
+test_sets="test"
 gmm=tri4a        # this is the source gmm-dir that we'll use for alignments; it
                  # should have alignments for the specified training data.
 num_threads_ubm=32
