@@ -188,10 +188,10 @@ fi
 
 
 if [ $stage -le 16 ]; then
-  if [[ $(hostname -f) == *.clsp.jhu.edu ]] && [ ! -d $dir/egs/storage ]; then
-    utils/create_split_dir.pl \
-     /export/b0{3,4,5,6}/$USER/kaldi-data/egs/wsj-$(date +'%m_%d_%H_%M')/s5/$dir/egs/storage $dir/egs/storage
-  fi
+#  if [[ $(hostname -f) == *.clsp.jhu.edu ]] && [ ! -d $dir/egs/storage ]; then
+#    utils/create_split_dir.pl \
+#     /export/b0{3,4,5,6}/$USER/kaldi-data/egs/wsj-$(date +'%m_%d_%H_%M')/s5/$dir/egs/storage $dir/egs/storage
+#  fi
 
   steps/nnet3/chain/train.py --stage=$train_stage \
     --cmd="$decode_cmd" \
@@ -207,7 +207,7 @@ if [ $stage -le 16 ]; then
     --trainer.num-epochs=4 \
     --trainer.frames-per-iter=3000000 \
     --trainer.optimization.num-jobs-initial=2 \
-    --trainer.optimization.num-jobs-final=8 \
+    --trainer.optimization.num-jobs-final=5 \
     --trainer.optimization.initial-effective-lrate=0.0005 \
     --trainer.optimization.final-effective-lrate=0.00005 \
     --trainer.num-chunk-per-minibatch=256,128,64 \
@@ -237,16 +237,16 @@ if [ $stage -le 17 ]; then
   # as long as phones.txt was compatible.
 
   utils/lang/check_phones_compatible.sh \
-    data/lang_test_tgpr/phones.txt $lang/phones.txt
+    data/lang_nosp/phones.txt $lang/phones.txt
   utils/mkgraph.sh \
-    --self-loop-scale 1.0 data/lang_test_tgpr \
-    $tree_dir $tree_dir/graph_tgpr || exit 1;
+    --self-loop-scale 1.0 data/lang_nosp \
+    $tree_dir $tree_dir/graph || exit 1;
 
-  utils/lang/check_phones_compatible.sh \
-    data/lang_test_bd_tgpr/phones.txt $lang/phones.txt
-  utils/mkgraph.sh \
-    --self-loop-scale 1.0 data/lang_test_bd_tgpr \
-    $tree_dir $tree_dir/graph_bd_tgpr || exit 1;
+#  utils/lang/check_phones_compatible.sh \
+#    data/lang_test_bd_tgpr/phones.txt $lang/phones.txt
+#  utils/mkgraph.sh \
+#    --self-loop-scale 1.0 data/lang_test_bd_tgpr \
+#    $tree_dir $tree_dir/graph_bd_tgpr || exit 1;
 fi
 
 if [ $stage -le 18 ]; then
@@ -254,10 +254,10 @@ if [ $stage -le 18 ]; then
   rm $dir/.error 2>/dev/null || true
 
   for data in $test_sets; do
-    (
+   ( 
       data_affix=$(echo $data | sed s/test_//)
       nspk=$(wc -l <data/${data}_hires/spk2utt)
-      for lmtype in tgpr bd_tgpr; do
+      #for lmtype in tgpr bd_tgpr; do
         steps/nnet3/decode.sh \
           --acwt 1.0 --post-decode-acwt 10.0 \
           --extra-left-context 0 --extra-right-context 0 \
@@ -266,15 +266,15 @@ if [ $stage -le 18 ]; then
           --frames-per-chunk $frames_per_chunk \
           --nj $nspk --cmd "$decode_cmd"  --num-threads 4 \
           --online-ivector-dir exp/nnet3${nnet3_affix}/ivectors_${data}_hires \
-          $tree_dir/graph_${lmtype} data/${data}_hires ${dir}/decode_${lmtype}_${data_affix} || exit 1
-      done
+          $tree_dir/graph data/${data}_hires ${dir}/decode_${data_affix} || exit 1
+     #done
       steps/lmrescore.sh \
         --self-loop-scale 1.0 \
-        --cmd "$decode_cmd" data/lang_test_{tgpr,tg} \
-        data/${data}_hires ${dir}/decode_{tgpr,tg}_${data_affix} || exit 1
-      steps/lmrescore_const_arpa.sh --cmd "$decode_cmd" \
-        data/lang_test_bd_{tgpr,fgconst} \
-       data/${data}_hires ${dir}/decode_${lmtype}_${data_affix}{,_fg} || exit 1
+        --cmd "$decode_cmd" data/lang_nosp \
+        data/${data}_hires ${dir}/decode_${data_affix} || exit 1
+#      steps/lmrescore_const_arpa.sh --cmd "$decode_cmd" \
+#        data/lang_test_bd_{tgpr,fgconst} \
+#       data/${data}_hires ${dir}/decode_${data_affix} || exit 1
     ) || touch $dir/.error &
   done
   wait
@@ -297,22 +297,22 @@ if $test_online_decoding && [ $stage -le 19 ]; then
   for data in $test_sets; do
     (
       data_affix=$(echo $data | sed s/test_//)
-      nspk=$(wc -l <data/${data}_hires/spk2utt)
-      # note: we just give it "data/${data}" as it only uses the wav.scp, the
+		nspk=$(wc -l <data/${data}_hires/spk2utt)
+			  # note: we just give it "data/${data}" as it only uses the wav.scp, the
       # feature type does not matter.
-      for lmtype in tgpr bd_tgpr; do
+#      for lmtype in tgpr bd_tgpr; do
         steps/online/nnet3/decode.sh \
           --acwt 1.0 --post-decode-acwt 10.0 \
           --nj $nspk --cmd "$decode_cmd" \
-          $tree_dir/graph_${lmtype} data/${data} ${dir}_online/decode_${lmtype}_${data_affix} || exit 1
-      done
+          $tree_dir/graph data/${data} ${dir}_online/decode_${data_affix} || exit 1
+#      done
       steps/lmrescore.sh \
         --self-loop-scale 1.0 \
-        --cmd "$decode_cmd" data/lang_test_{tgpr,tg} \
-        data/${data}_hires ${dir}_online/decode_{tgpr,tg}_${data_affix} || exit 1
-      steps/lmrescore_const_arpa.sh --cmd "$decode_cmd" \
-        data/lang_test_bd_{tgpr,fgconst} \
-       data/${data}_hires ${dir}_online/decode_${lmtype}_${data_affix}{,_fg} || exit 1
+        --cmd "$decode_cmd" data/lang_nosp \
+        data/${data}_hires ${dir}_online/decode_${data_affix} || exit 1
+#      steps/lmrescore_const_arpa.sh --cmd "$decode_cmd" \
+#        data/lang_test_bd_{tgpr,fgconst} \
+#       data/${data}_hires ${dir}_online/decode_${lmtype}_${data_affix}{,_fg} || exit 1
     ) || touch $dir/.error &
   done
   wait
