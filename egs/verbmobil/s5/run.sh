@@ -9,12 +9,18 @@ set -e # exit on error
 decode=true
 
 nj=40
+stage=0
+download_dict=false
 #vm1=/export/VM1/
 #vm2=/export/VM2/
 vm1=/mnt/raid0/data/VM1
 vm2=/mnt/raid0/data/VM2
 
-#local/vm_dic_download.sh $vm1 $vm2
+. ./utils/parse_options.sh
+
+if [ $download_dict ]; then
+    local/vm_dic_download.sh $vm1 $vm2
+fi
 
 # Usage: local/vm_data_prep.sh 
 echo "***** data_prep ***** "
@@ -62,121 +68,117 @@ steps/make_mfcc.sh --cmd "$train_cmd" --nj $nj $datdir
 steps/compute_cmvn_stats.sh $datdir
 done
 
-# train mono
-echo "***** Start monophone training ***** " 
+if [ $stage -le 2 ]; then
 
-steps/train_mono.sh --boost-silence 1.25 --nj $nj --cmd "$train_cmd" \
-    data/train_2kshort data/lang_nosp exp/mono0a
+    # train mono
+    echo "***** Start monophone training ***** "
 
-if $decode; then
-    utils/mkgraph.sh data/lang_nosp exp/mono0a exp/mono0a/graph_nosp
+    steps/train_mono.sh --boost-silence 1.25 --nj $nj --cmd "$train_cmd" \
+        data/train_2kshort data/lang_nosp exp/mono0a
 
-    steps/decode.sh --nj $nj --cmd "$decode_cmd" exp/mono0a/graph_nosp \
-	data/test exp/mono0a/decode_nosp_test # local score could not be called, also score basic and sclite could not be called
-fi
+    if $decode; then
+        utils/mkgraph.sh data/lang_nosp exp/mono0a exp/mono0a/graph_nosp
 
-# steps/diagnostic/analyze_lats.sh --cmd run.pl exp/mono0a/graph_nosp exp/mono0a/decode_nosp_train
-# analyze_phone_length_stats.py: WARNING: optional-silence sil is seen only 67.95% of the time at utterance end.  This may not be optimal.
-# steps/diagnostic/analyze_lats.sh: see stats in exp/mono0a/decode_nosp_train/log/analyze_alignments.log
-# Overall, lattice depth (10,50,90-percentile)=(1,1,7) and mean=3.4
-# steps/diagnostic/analyze_lats.sh: see stats in exp/mono0a/decode_nosp_train/log/analyze_lattice_depth_stats.log
-# data/train_2kshort/stm does not exist: using local/score_basic.sh
-
-# train tri1
-echo "***** Align monophones ***** "
-steps/align_si.sh --boost-silence 1.25 --nj $nj --cmd "$train_cmd" \
-    data/train_6k data/lang_nosp exp/mono0a exp/mono0a_ali
-
-echo "***** Start training delta based triphones ***** "
-
-steps/train_deltas.sh --boost-silence 1.25 --cmd "$train_cmd" \
-    2000 10000 data/train_6k data/lang_nosp  exp/mono0a_ali exp/tri1
-
-if $decode; then
-    echo "***** Decoding ***** "
-    utils/mkgraph.sh data/lang_nosp exp/tri1 exp/tri1/graph_nosp
-
-    steps/decode.sh --nj $nj --cmd "$decode_cmd" exp/tri1/graph_nosp \
-	data/test exp/tri1/decode_nosp_test
-    # steps/decode.sh --nj $nj --cmd "$decode_cmd" exp/tri1/graph_nosp \
-	# data/train_6k exp/tri1/decode_nosp_train6k
-fi
-
-# train tri2a
-echo "***** Aligning delta based triphones ***** "
-
-steps/align_si.sh --nj $nj --cmd "$train_cmd" \
-    --use-graphs true data/train_6k data/lang_nosp exp/tri1 exp/tri1_ali
-echo "***** Train delta+delta based triphones ***** "
-
-steps/train_deltas.sh --cmd "$train_cmd" \
-    2500 15000 data/train_6k data/lang_nosp exp/tri1_ali exp/tri2a 
-
-if $decode; then
-    echo "***** Decoding ***** "
-    utils/mkgraph.sh data/lang_nosp exp/tri2a exp/tri2a/graph_nosp 
-
-    steps/decode.sh --nj $nj --cmd "$decode_cmd" exp/tri2a/graph_nosp \
-    data/test exp/tri2a/decode_nosp_test
-fi
-
-# train tri3a 
-echo "***** Align delta+delta based triphones ***** "
-
-steps/align_si.sh --nj $nj --cmd "$train_cmd" \
-    data/train_half data/lang_nosp exp/tri2a exp/tri2a_ali
-
-echo "***** Train LDA-MLLT triphones ***** "
-steps/train_lda_mllt.sh --cmd "$train_cmd" \
-    --splice-opts "--left-context=3 --right-context=3" \
-    3500 20000 data/train_half data/lang_nosp exp/tri2a_ali exp/tri3a
-
-# exp/tri2b: nj=20 align prob=-49.05 over 22.61h [retry=10.8%, fail=0.8%] states=2064 gauss=15034 tree-impr=3.85 lda-sum=16.01 mllt:impr,logdet=1.14,1.65
-# steps/train_lda_mllt.sh: Done training system with LDA+MLLT features in exp/tri2b
-
-if $decode; then
-    echo "Decoding"
-    utils/mkgraph.sh data/lang_nosp exp/tri3a exp/tri3a/graph_nosp
-
-    steps/decode.sh --nj $nj --cmd "$decode_cmd" exp/tri3a/graph_nosp \
-	data/test exp/tri3a/decode_nosp_test
+        steps/decode.sh --nj $nj --cmd "$decode_cmd" exp/mono0a/graph_nosp \
+        data/test exp/mono0a/decode_nosp_test # local score could not be called, also score basic and sclite could not be called
+    fi
 
 fi
 
-# train tri4a
-echo "***** Align LDA-MLLT triphones ***** " #better with align_fmllr.sh?
+if [ $stage -le 3 ]; then
+    # train tri1
+    echo "***** Align monophones ***** "
+    steps/align_si.sh --boost-silence 1.25 --nj $nj --cmd "$train_cmd" \
+        data/train_6k data/lang_nosp exp/mono0a exp/mono0a_ali
 
-steps/align_si.sh --nj $nj --cmd "$train_cmd" \
-    data/train data/lang_nosp exp/tri3a exp/tri3a_ali
+    echo "***** Start training delta based triphones ***** "
 
-echo "***** Train SAT triphones ***** " 
-steps/train_sat.sh --cmd "$train_cmd" 4200 40000 \
-    data/train data/lang_nosp exp/tri3a_ali exp/tri4a
+    steps/train_deltas.sh --boost-silence 1.25 --cmd "$train_cmd" \
+        2000 10000 data/train_6k data/lang_nosp  exp/mono0a_ali exp/tri1
 
-if $decode; then
-    echo "***** Decoding ***** "
-    utils/mkgraph.sh data/lang_nosp exp/tri4a exp/tri4a/graph_nosp
+    if $decode; then
+        echo "***** Decoding ***** "
+        utils/mkgraph.sh data/lang_nosp exp/tri1 exp/tri1/graph_nosp
 
-    steps/decode_fmllr.sh --nj $nj --cmd "$decode_cmd" \
-        --acwt 0.067 \
-        exp/tri4a/graph_nosp data/test exp/tri4a/decode_nosp_test
-
+        steps/decode.sh --nj $nj --cmd "$decode_cmd" exp/tri1/graph_nosp \
+        data/test exp/tri1/decode_nosp_test
+    fi
 fi
 
-# YOU ARE HERE AT THE MOMENT
-# Make final alignements for further training in a neural net
-echo "***** Align SAT triphones ***** " # better with aling_fmlrr.sh ? 
-steps/align_fmllr.sh --nj $nj --cmd "$train_cmd" \
-    data/train data/lang_nosp exp/tri4a exp/tri4a_ali
+if [ $stage -le 4 ]; then
+    # train tri2a
+    echo "***** Aligning delta based triphones ***** "
 
-# Estimate pronunciation and silence probabilities.
-# steps/get_prons.sh --cmd "$train_cmd" \
-#     data/train data/lang_nosp exp/tri3b
+    steps/align_si.sh --nj $nj --cmd "$train_cmd" \
+        --use-graphs true data/train_6k data/lang_nosp exp/tri1 exp/tri1_ali
+    echo "***** Train delta+delta based triphones ***** "
 
-# utils/dict_dir_add_pronprobs.sh --max-normalize true \
-#     data/local/dict_nosp \
-#     exp/tri3b/pron_counts_nowb.txt exp/tri3b/sil_counts_nowb.txt \
-#     exp/tri3b/pron_bigram_counts_nowb.txt data/local/dict
+    steps/train_deltas.sh --cmd "$train_cmd" \
+        2500 15000 data/train_6k data/lang_nosp exp/tri1_ali exp/tri2a 
 
-# utils/prepare_lang.sh data/local/dict_nosp \
-#   "<SPOKEN_NOISE>" data/local/lang_nosp data/lang_nosp # macht shit, why?
+    if $decode; then
+        echo "***** Decoding ***** "
+        utils/mkgraph.sh data/lang_nosp exp/tri2a exp/tri2a/graph_nosp 
+
+        steps/decode.sh --nj $nj --cmd "$decode_cmd" exp/tri2a/graph_nosp \
+        data/test exp/tri2a/decode_nosp_test
+    fi
+fi
+
+if [ $stage -le 5 ]; then
+    # train tri3a
+    echo "***** Align delta+delta based triphones ***** "
+
+    steps/align_si.sh --nj $nj --cmd "$train_cmd" \
+        data/train_half data/lang_nosp exp/tri2a exp/tri2a_ali
+
+    echo "***** Train LDA-MLLT triphones ***** "
+    steps/train_lda_mllt.sh --cmd "$train_cmd" \
+        --splice-opts "--left-context=3 --right-context=3" \
+        3500 20000 data/train_half data/lang_nosp exp/tri2a_ali exp/tri3a
+
+
+
+    if $decode; then
+        echo "Decoding"
+        utils/mkgraph.sh data/lang_nosp exp/tri3a exp/tri3a/graph_nosp
+
+        steps/decode.sh --nj $nj --cmd "$decode_cmd" exp/tri3a/graph_nosp \
+        data/test exp/tri3a/decode_nosp_test
+
+    fi
+
+fi 
+
+if [ $stage -le 6 ]; then
+    # train tri4a
+    echo "***** Align LDA-MLLT triphones ***** " #better with align_fmllr.sh?
+
+    steps/align_si.sh --nj $nj --cmd "$train_cmd" \
+        data/train data/lang_nosp exp/tri3a exp/tri3a_ali
+
+    echo "***** Train SAT triphones ***** "
+    steps/train_sat.sh --cmd "$train_cmd" 4200 40000 \
+        data/train data/lang_nosp exp/tri3a_ali exp/tri4a
+
+    if $decode; then
+        echo "***** Decoding ***** "
+        utils/mkgraph.sh data/lang_nosp exp/tri4a exp/tri4a/graph_nosp
+
+        steps/decode_fmllr.sh --nj $nj --cmd "$decode_cmd" \
+            --acwt 0.067 \
+            exp/tri4a/graph_nosp data/test exp/tri4a/decode_nosp_test
+
+    fi
+
+    # YOU ARE HERE AT THE MOMENT
+    # Make final alignements for further training in a neural net
+    echo "***** Align SAT triphones ***** " 
+    steps/align_fmllr.sh --nj $nj --cmd "$train_cmd" \
+        data/train data/lang_nosp exp/tri4a exp/tri4a_ali
+fi
+
+# run nnet3 chain neural net training
+if [ $stage -le 7 ]; then 
+    local/vm_run_tdnn.sh --test_online_decoding true
+fi
