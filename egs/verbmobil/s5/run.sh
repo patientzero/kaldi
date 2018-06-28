@@ -16,6 +16,8 @@ download_dict=false
 vm1=/mnt/raid0/data/VM1
 vm2=/mnt/raid0/data/VM2
 
+pos_dep_phones=false
+
 . ./utils/parse_options.sh
 
 if [ $download_dict ]; then
@@ -32,8 +34,6 @@ echo "***** prepare_dict ***** "
 local/vm_prepare_dict.sh $vm1 $vm2
 
 # prepare language
-pos_dep_phones=false
-
 echo "***** prepare_lang ***** "
 utils/prepare_lang.sh --position-dependent-phones $pos_dep_phones \
     data/local/dict_nosp "<unk>" data/local/lang_nosp data/lang_nosp 
@@ -170,8 +170,6 @@ if [ $stage -le 6 ]; then
             exp/tri4a/graph_nosp data/test exp/tri4a/decode_nosp_test
 
     fi
-
-    # YOU ARE HERE AT THE MOMENT
     # Make final alignements for further training in a neural net
     echo "***** Align SAT triphones ***** " 
     steps/align_fmllr.sh --nj $nj --cmd "$train_cmd" \
