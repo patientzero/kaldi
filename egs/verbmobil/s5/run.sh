@@ -20,7 +20,7 @@ pos_dep_phones=false
 
 . ./utils/parse_options.sh
 
-if [ $download_dict ]; then
+if [ "$download_dict" = true ]; then
     local/vm_dic_download.sh $vm1 $vm2
 fi
 
