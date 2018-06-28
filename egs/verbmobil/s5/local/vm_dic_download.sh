@@ -27,7 +27,31 @@ do
   wget ftp://ftp.bas.uni-muenchen.de/pub/BAS/VM/SETS/VM1_${set}.lex
   wget ftp://ftp.bas.uni-muenchen.de/pub/BAS/VM/SETS/VM1_${set}.list
 done
+# echo "Downloading German lexicon"
+# wget ftp://ftp.bas.uni-muenchen.de/pub/BAS/VM/vm_ger.lex
+# echo "Downloading German phone set"
+# wget ftp://ftp.bas.uni-muenchen.de/pub/BAS/VM/vm_ger.set
+# echo "Downloading documentation"
+# # Documentation contains VM_Bonus material which conbtains german trigramm language model 
+# wget ftp://ftp.bas.uni-muenchen.de/pub/BAS/VM/vm2.documentation.zip
+# unzip ./vm2.documentation.zip
+# cd ./vm2.documentation/VMBONUS
+# tar xzvf VM2-LM-2.4.tgz.
+# echo "Downloading documentation"
+# # Documentation contains VM_Bonus material which conbtains german trigramm language model 
+# wget ftp://ftp.bas.uni-muenchen.de/pub/BAS/VM/vm2.documentation.zip
+# unzip ./vm2.documentation.zip
+# cd ./vm2.documentation/VMBONUS
+# tar xzvf VM2-LM-2.4.tgz.
+# echo "Downloading documentation"
+# # Documentation contains VM_Bonus material which conbtains german trigramm language model 
+# wget ftp://ftp.bas.uni-muenchen.de/pub/BAS/VM/vm2.documentation.zip
+# unzip ./vm2.documentation.zip
+# cd ./vm2.documentation/VMBONUS
+# tar xzvf VM2-LM-2.4.tgz.
 
+# echo "Downloading german pronounciation alternatives"
+# wget ftp://ftp.bas.uni-muenchen.de/pub/BAS/VM/VM.German.Wordforms
 cd - 
 cd $vm2_dir
 
@@ -37,7 +61,14 @@ do
   wget ftp://ftp.bas.uni-muenchen.de/pub/BAS/VM/SETS/VM2_${set}
   wget ftp://ftp.bas.uni-muenchen.de/pub/BAS/VM/SETS/VM2_${set}.lex
   wget ftp://ftp.bas.uni-muenchen.de/pub/BAS/VM/SETS/VM2_${set}.list
-
 done
+# echo "Downloading documentation"
+# # Documentation contains VM_Bonus material which conbtains german trigramm language model 
+# wget ftp://ftp.bas.uni-muenchen.de/pub/BAS/VM/vm2.documentation.zip
+# unzip ./vm2.documentation.zip ./vm2.documentation
+# cd - 
+# cd $vm2_dir/vm2.documentation/VMBONUS/LanguageModel 
+# # This extracts: VM2-2.4.lm.cs VM2-2.4.lm.map VM2-2.4.lm.wl and VM2-2.4.M3.lm.gz.
+# tar xzvf ./VM2-LM-2.4.tgz
 
 cd -
