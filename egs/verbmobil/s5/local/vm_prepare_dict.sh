@@ -32,10 +32,12 @@ cat $vm2_dir/VM2_TRAIN.lex $vm1_dir/VM1_TRAIN.lex | sort | uniq > $dir/lexicon0.
 # Remove Glottal Stop from Lex
 # Remove ' from words that start with an umlaut e.g. '"Ubersicht' > "Ubersicht
 # 173 lines, one inword occurence on Heilig'-Drei-K"onige
-sed "s/Q//g;s/'//g" $dir/lexicon0.txt > $dir/lexicon0q.txt
+grep ^Q $dir/lexicon0.txt > $dir/Q_tmp.txt 
+grep -v ^Q $dir/lexicon0.txt | sed "s/Q//g;s/'//g" > $dir/lexicon0Q.txt
+cat $dir/lexicon0Q.txt $dir/Q_tmp.txt > $dir/lexiconQ.txt
 
 # Pre-processing (remove comments) and remove <%> <h"as> to add later as spn
-grep -v '^#' $dir/lexicon0q.txt | awk 'NF>0' | grep -v -e '<%>' -e '<h"as>' | sort > $dir/lexicon1.txt || exit 1;
+grep -v '^#' $dir/lexiconQ.txt | awk 'NF>0' | grep -v -e '<%>' -e '<h"as>' | sort > $dir/lexicon1.txt || exit 1;
 
 # all phones are in one dataset
 cat $dir/lexicon1.txt | awk '{ for(n=2;n<=NF;n++){ phones[$n] = 1; }} END{for (p in phones) print p;}' | \

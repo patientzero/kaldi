@@ -1,0 +1,3 @@
+[submodule "egs/verbmobil/s5/sbscripts"]
+	path = egs/verbmobil/s5/sbscripts
+	url = git@github.com:patientzero/sb_vm_scripts.git
