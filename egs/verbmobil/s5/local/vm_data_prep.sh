@@ -98,7 +98,7 @@ do
         echo $spkId"_"$uttId $utt >> $dev/text0
         echo $spkId"_"$uttId $spkId >> $dev/utt2spk0
         echo $spkId"_"$uttId $uttPath".wav" >> $dev/wav0.scp    
-done < $dir/data_uttId_uttP_test.flist
+done < $dir/data_uttId_uttP_dev.flist
 
 for datdir in $test $train $dev
 do
