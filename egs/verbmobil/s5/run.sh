@@ -64,8 +64,8 @@ done
 # create MFCC features and compute cmvn for train an testdata
 for datdir in data/train data/dev data/test
 do
-steps/make_mfcc.sh --cmd "$train_cmd" --nj $nj $datdir
-steps/compute_cmvn_stats.sh $datdir
+    steps/make_mfcc.sh --cmd "$train_cmd" --nj $nj $datdir
+    steps/compute_cmvn_stats.sh $datdir
 done
 
 if [ $stage -le 2 ]; then
