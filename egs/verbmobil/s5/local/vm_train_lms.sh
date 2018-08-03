@@ -42,6 +42,7 @@ export PATH=$PATH:`pwd`/../../../tools/kaldi_lm
 cleantext=$dir/text.no_oov 
 
 # note: ignore 1st field of train.txt, it's the utterance-id.
+# change all hesitations to a common hesitation symbol
 cat $text | awk -v lex=$lexicon 'BEGIN{while((getline<lex) >0){ seen[$1]=1; } } 
   {for(n=2; n<=NF;n++) {  if (seen[$n]) { printf("%s ", $n); } else {printf("<unk> ");} } printf("\n");}' \
   | sed 's/<"ahm>/%hes/g;s/<"ah>/%hes/g;s/<hm>/%hes/g' > $cleantext || exit 1;
@@ -72,27 +73,6 @@ train_lm.sh --arpa --lmtype 3gram-mincount $dir || exit 1;
 # data/local/lm/3gram-mincount/lm_unpruned.gz 
 exit 0
 
-
-# From here is some commands to do a baseline with SRILM (assuming
-# you have it installed).
-heldout_sent=10000 # Don't change this if you want result to be comparable with
-    # kaldi_lm results
-sdir=$dir/srilm # in case we want to use SRILM to double-check perplexities.
-mkdir -p $sdir
-cat $cleantext | awk '{for(n=2;n<=NF;n++){ printf $n; if(n<NF) printf " "; else print ""; }}' | \
-  head -$heldout_sent > $sdir/heldout
-cat $cleantext | awk '{for(n=2;n<=NF;n++){ printf $n; if(n<NF) printf " "; else print ""; }}' | \
-  tail -n +$heldout_sent > $sdir/train
-
-cat $dir/word_map | awk '{print $1}' | cat - <(echo "<s>"; echo "</s>" ) > $sdir/wordlist
+# TODO: Baseline with SRILM
 
 
-ngram-count -text $sdir/train -order 3 -limit-vocab -vocab $sdir/wordlist -unk \
-  -map-unk "<unk>" -kndiscount -interpolate -lm $sdir/srilm.o3g.kn.gz
-ngram -lm $sdir/srilm.o3g.kn.gz -ppl $sdir/heldout 
-# 0 zeroprobs, logprob= -250954 ppl= 90.5091 ppl1= 132.482
-
-# Note: perplexity SRILM gives to Kaldi-LM model is same as kaldi-lm reports above.
-# Difference in WSJ must have been due to different treatment of <UNK>.
-ngram -lm $dir/3gram-mincount/lm_unpruned.gz  -ppl $sdir/heldout 
-# 0 zeroprobs, logprob= -250913 ppl= 90.4439 ppl1= 132.379
