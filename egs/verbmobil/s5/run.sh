@@ -11,6 +11,7 @@ decode=true
 nj=40
 stage=0
 download_dict=false
+score_sclite=true
 #vm1=/export/VM1/
 #vm2=/export/VM2/
 vm1=/mnt/raid0/data/VM1
@@ -67,6 +68,12 @@ do
     steps/make_mfcc.sh --cmd "$train_cmd" --nj $nj $datdir
     steps/compute_cmvn_stats.sh $datdir
 done
+
+if [ "$score_sclite" = true ]; then
+    touch ./data/test/score_sclite
+else
+    rm ./data/test/score_sclite || true
+fi
 
 if [ $stage -le 2 ]; then
 
