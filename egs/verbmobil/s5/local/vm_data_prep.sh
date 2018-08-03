@@ -41,17 +41,17 @@ do
 
     cat $vm2_dir/VM2_${datset} \
         | awk '{printf("%s '$vm2_dir'/%s/%s\n", $1, substr($1,0,5), $1)}' \
-        >> $dir/data_uttId_uttP_train_tmp.flist
+        >> $dir/data_uttId_uttP_${lowerset}_tmp.flist
 
     cat $dir/data_uttId_uttP_${lowerset}_tmp.flist | sort | uniq > $dir/data_uttId_uttP_${lowerset}.flist
     rm $dir/data_uttId_uttP_${lowerset}_tmp.flist 
 done
 
-echo "Create train data for $dir/data_uttId_uttP_train.flist"
 
 for datdir in $dev $train $test
 do
     setname=$(echo $datdir | cut -d'/' -f2)
+    echo "Create $setname data for $datdir/data_uttId_uttP_$setname.flist"
     while read uttIduttP
     do
         uttId=`echo $uttIduttP | cut -d" " -f1`
@@ -68,6 +68,7 @@ done
 
 for datdir in $test $train $dev
 do
+    echo "Prepare $test datadir"
     cat $datdir/text0 | uniq | sort > $datdir/text
     cat $datdir/utt2spk0 | uniq | sort > $datdir/utt2spk
     cat $datdir/wav0.scp | uniq | sort > $datdir/wav.scp
@@ -75,6 +76,5 @@ do
     # "Cleanup temporary files"
     rm $datdir/text0 $datdir/utt2spk0 $datdir/wav0.scp
     # Create spk2utt File from utt2spk
-    echo "Create Speaker2Utterance file"
     cat $datdir/utt2spk | utils/utt2spk_to_spk2utt.pl > $datdir/spk2utt
 done
