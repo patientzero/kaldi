@@ -41,7 +41,7 @@ done
 # transform data to fit expected format(trn) and clean from %hes
 if [ ! -f $data/text_trn ]; then
   echo "create ref file"
-  awk '{for(n=2;n<=NF;n++) if(n<NF){printf $n " "}else {print "(" $1 ")" }}' $data/text | \
+  awk '{for(n=1;n<=NF;n++){if(n!=1&&n<NF){printf $n " "}else{if(n==NF){print $n " " "(" $1 ")"}}}}' $data/text |
   clean_text > $data/text_trn
 fi
 
