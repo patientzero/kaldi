@@ -35,17 +35,8 @@ done
 
 mkdir -p $dir/scoring/log
 
-
-function filter_text {
-  perl -e 'foreach $w (@ARGV) { $bad{$w} = 1; }
-   while(<STDIN>) { @A  = split(" ", $_); $id = shift @A; print "$id ";
-     foreach $a (@A) { if (!defined $bad{$a}) { print "$a "; }} print "\n"; }' \
-   '[noise]' '[laughter]' '[vocalized-noise]' '<unk>' '%HESITATION' '<"ahm>' '<"ah>' '<h"as>' '<%>' 
-} # aus dem testtext raus(text.filt), shift is pop left
-
 function clean_text {
-  cat $1 | sed 's/%hes//g' | sed -e 's/  */\ /g'
- Stashed changes
+  cat $1 | sed 's/%hes//g;s/<h"as>//g;s/<%>//g;s/<unk>//g' | sed -e 's/<"ahm>//g;s/<"ah>//g;s/<hm>//g' | sed -e 's/  */\ /g'
 }
 
 $cmd LMWT=$min_lmwt:$max_lmwt $dir/scoring/log/best_path.LMWT.log \
