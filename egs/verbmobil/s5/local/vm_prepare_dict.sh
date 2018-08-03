@@ -29,7 +29,7 @@ fi
 # Create lexikon for VM1 and VM2 train data
 cat $vm2_dir/VM2_TRAIN.lex $vm1_dir/VM1_TRAIN.lex | sort | uniq > $dir/lexicon0.txt
 
-# Remove Glottal Stop from Lex
+# Remove Glottal Stop from Lex(by removing the Q, readding words later
 # Remove ' from words that start with an umlaut e.g. '"Ubersicht' > "Ubersicht
 # 173 lines, one inword occurence on Heilig'-Drei-K"onige
 grep ^Q $dir/lexicon0.txt > $dir/Q_tmp.txt 
