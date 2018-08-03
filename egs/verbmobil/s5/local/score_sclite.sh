@@ -47,7 +47,6 @@ fi
 
 mkdir -p $dir/scoring/log
 
-
 $cmd LMWT=$min_lmwt:$max_lmwt $dir/scoring/log/best_path.LMWT.log \
   lattice-best-path --lm-scale=LMWT --word-symbol-table=$lang/words.txt \
     "ark:gunzip -c $dir/lat.*.gz|" ark,t:$dir/scoring/LMWT.tra || exit 1;
@@ -57,14 +56,13 @@ for lmwt in `seq $min_lmwt $max_lmwt`; do
   cat - > $dir/scoring/$lmwt.txt || exit 1;
 done
 
-
 # remove hes from hyp ref
 for lmwt in `seq $min_lmwt $max_lmwt`; do
 #find utterances that are empty after cleaning
   clean_text $dir/scoring/$lmwt.txt | awk '{if(NF == 1){print $1}}' > $dir/scoring/empty
 #remove empty utterances and reformat hypothesis files to trn format
   utils/filter_scp.pl --exclude $dir/scoring/empty $dir/scoring/$lmwt.txt | \
-    clean_text | awk '{for(n=2;n<=NF;n++) if(n<NF){printf $n " "}else {print "(" $1 ")" }}' \
+    clean_text | awk '{for(n=1;n<=NF;n++){if(n!=1&&n<NF){printf $n " "}else{if(n==NF){print $n " " "(" $1 ")"}}}}' \
     > $dir/scoring/$lmwt.trn
 done
 
