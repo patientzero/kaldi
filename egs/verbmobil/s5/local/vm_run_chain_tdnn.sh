@@ -188,10 +188,6 @@ fi
 
 
 if [ $stage -le 16 ]; then
-#  if [[ $(hostname -f) == *.clsp.jhu.edu ]] && [ ! -d $dir/egs/storage ]; then
-#    utils/create_split_dir.pl \
-#     /export/b0{3,4,5,6}/$USER/kaldi-data/egs/wsj-$(date +'%m_%d_%H_%M')/s5/$dir/egs/storage $dir/egs/storage
-#  fi
 
   steps/nnet3/chain/train.py --stage=$train_stage \
     --cmd="$decode_cmd" \
@@ -242,11 +238,6 @@ if [ $stage -le 17 ]; then
     --self-loop-scale 1.0 data/lang_nosp \
     $tree_dir $tree_dir/graph || exit 1;
 
-#  utils/lang/check_phones_compatible.sh \
-#    data/lang_test_bd_tgpr/phones.txt $lang/phones.txt
-#  utils/mkgraph.sh \
-#    --self-loop-scale 1.0 data/lang_test_bd_tgpr \
-#    $tree_dir $tree_dir/graph_bd_tgpr || exit 1;
 fi
 
 if [ $stage -le 18 ]; then
@@ -257,7 +248,6 @@ if [ $stage -le 18 ]; then
    ( 
       data_affix=$(echo $data | sed s/test_//)
       nspk=$(wc -l <data/${data}_hires/spk2utt)
-      #for lmtype in tgpr bd_tgpr; do
         steps/nnet3/decode.sh \
           --acwt 1.0 --post-decode-acwt 10.0 \
           --extra-left-context 0 --extra-right-context 0 \
@@ -272,9 +262,6 @@ if [ $stage -le 18 ]; then
         --self-loop-scale 1.0 \
         --cmd "$decode_cmd" data/lang_nosp \
         data/${data}_hires ${dir}/decode_${data_affix} || exit 1
-#      steps/lmrescore_const_arpa.sh --cmd "$decode_cmd" \
-#        data/lang_test_bd_{tgpr,fgconst} \
-#       data/${data}_hires ${dir}/decode_${data_affix} || exit 1
     ) || touch $dir/.error &
   done
   wait
@@ -299,20 +286,10 @@ if $test_online_decoding && [ $stage -le 19 ]; then
       data_affix=$(echo $data | sed s/test_//)
 		nspk=$(wc -l <data/${data}_hires/spk2utt)
 			  # note: we just give it "data/${data}" as it only uses the wav.scp, the
-      # feature type does not matter.
-#      for lmtype in tgpr bd_tgpr; do
         steps/online/nnet3/decode.sh \
           --acwt 1.0 --post-decode-acwt 10.0 \
           --nj $nspk --cmd "$decode_cmd" \
           $tree_dir/graph data/${data} ${dir}_online/decode_${data_affix} || exit 1
-#      done
-      steps/lmrescore.sh \
-        --self-loop-scale 1.0 \
-        --cmd "$decode_cmd" data/lang_nosp \
-        data/${data}_hires ${dir}_online/decode_${data_affix} || exit 1
-#      steps/lmrescore_const_arpa.sh --cmd "$decode_cmd" \
-#        data/lang_test_bd_{tgpr,fgconst} \
-#       data/${data}_hires ${dir}_online/decode_${lmtype}_${data_affix}{,_fg} || exit 1
     ) || touch $dir/.error &
   done
   wait
