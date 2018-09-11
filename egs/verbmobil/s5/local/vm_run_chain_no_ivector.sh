@@ -58,13 +58,6 @@ where "nvcc" is installed.
 EOF
 fi
 
-local/nnet3/run_ivector_common.sh \
-  --stage $stage --nj $nj \
-  --train-set $train_set --gmm $gmm \
-  --num-threads-ubm $num_threads_ubm \
-  --nnet3-affix "$nnet3_affix"
-
-
 gmm_dir=exp/${gmm}
 ali_dir=exp/${gmm}_ali_${train_set}_sp
 lat_dir=exp/chain${nnet3_affix}/${gmm}_${train_set}_sp_lats
@@ -82,7 +75,7 @@ tree_dir=exp/chain${nnet3_affix}/tree_a_sp
 # you should probably name it differently.
 lang=data/lang_chain
 
-for f in $train_data_dir/feats.scp $train_ivector_dir/ivector_online.scp \
+for f in $train_data_dir/feats.scp \
     $lores_train_data_dir/feats.scp $gmm_dir/final.mdl \
     $ali_dir/ali.1.gz $gmm_dir/final.mdl; do
   [ ! -f $f ] && echo "$0: expected file $f to exist" && exit 1
@@ -154,7 +147,7 @@ if [ $stage -le 15 ]; then
   # please note that it is important to have input layer with the name=input
   # as the layer immediately preceding the fixed-affine-layer to enable
   # the use of short notation for the descriptor
-  fixed-affine-layer name=lda input=Append(-2,-1,0,1,2,ReplaceIndex(input, t, 0)) affine-transform-file=$dir/configs/lda.mat
+  fixed-affine-layer name=lda input=Append(-2,-1,0,1,2) affine-transform-file=$dir/configs/lda.mat
 
   # the first splicing is moved before the lda layer, so no splicing here
   relu-batchnorm-layer name=tdnn1 $opts dim=448
@@ -255,7 +248,7 @@ if [ $stage -le 18 ]; then
         --frames-per-chunk $frames_per_chunk \
         --nj $nspk --cmd "$decode_cmd"  --num-threads 4 \
         $tree_dir/graph data/${data}_hires ${dir}/decode_${data_affix} || exit 1
-     #done
+    
       steps/lmrescore.sh \
         --self-loop-scale 1.0 \
         --cmd "$decode_cmd" data/lang_nosp \
