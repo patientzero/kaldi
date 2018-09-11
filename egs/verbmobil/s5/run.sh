@@ -185,5 +185,5 @@ fi
 
 # run nnet3 chain neural net training
 if [ $stage -le 7 ]; then 
-    local/vm_run_tdnn.sh --test_online_decoding true
+    local/vm_run_chain.sh --test_online_decoding true
 fi
