@@ -257,11 +257,12 @@ if [ $stage -le 18 ]; then
           --nj $nspk --cmd "$decode_cmd"  --num-threads 4 \
           --online-ivector-dir exp/nnet3${nnet3_affix}/ivectors_${data}_hires \
           $tree_dir/graph data/${data}_hires ${dir}/decode_${data_affix} || exit 1
-     #done
+
       steps/lmrescore.sh \
         --self-loop-scale 1.0 \
-        --cmd "$decode_cmd" data/lang_nosp \
-        data/${data}_hires ${dir}/decode_${data_affix} || exit 1
+        --cmd "$decode_cmd" data/lang_nosp $lang\
+        data/${data}_hires ${dir}/decode_${data_affix} \
+        ${dir}/decode_${data_affix}_rescore || exit 1
     ) || touch $dir/.error &
   done
   wait
