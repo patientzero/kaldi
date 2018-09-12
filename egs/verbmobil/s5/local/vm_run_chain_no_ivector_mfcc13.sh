@@ -6,6 +6,8 @@
 
 set -e -o pipefail
 
+export CUDA_VISIBLE_DEVICES=0,1,2,3
+
 # First the options that are passed through to run_ivector_common.sh
 # (some of which are also used in this script directly).
 stage=0
@@ -107,7 +109,7 @@ fi
 if [ $stage -le 13 ]; then
   # Get the alignments as lattices (gives the chain training more freedom).
   # use the same num-jobs as the alignments
-  steps/align_fmllr_lats.sh --nj 100 --cmd "$train_cmd" ${lores_train_data_dir} \
+  steps/align_fmllr_lats.sh --nj $nj --cmd "$train_cmd" ${lores_train_data_dir} \
     data/lang_nosp $gmm_dir $lat_dir
   rm $lat_dir/fsts.*.gz # save space
 fi
@@ -194,7 +196,7 @@ if [ $stage -le 16 ]; then
     --trainer.num-epochs=4 \
     --trainer.frames-per-iter=3000000 \
     --trainer.optimization.num-jobs-initial=1 \
-    --trainer.optimization.num-jobs-final=1 \
+    --trainer.optimization.num-jobs-final=4 \
     --trainer.optimization.initial-effective-lrate=0.0005 \
     --trainer.optimization.final-effective-lrate=0.00005 \
     --trainer.num-chunk-per-minibatch=256,128,64 \
