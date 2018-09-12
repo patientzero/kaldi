@@ -57,6 +57,13 @@ If you want to use GPUs (and have them), go to src/, and configure and make on a
 where "nvcc" is installed.
 EOF
 fi
+# Still needed to extract highres mfcc 40 features
+local/nnet3/run_ivector_common.sh \
+  --stage $stage --nj $nj \
+  --train-set $train_set --gmm $gmm \
+  --num-threads-ubm $num_threads_ubm \
+  --nnet3-affix "$nnet3_affix"
+
 
 gmm_dir=exp/${gmm}
 ali_dir=exp/${gmm}_ali_${train_set}_sp
